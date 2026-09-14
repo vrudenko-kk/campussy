@@ -60,6 +60,22 @@
         <nav class="breadcrumbs" aria-label="Навигация по разделам">
           <button type="button" id="back-to-campus">Кампус</button><span>›</span><span id="breadcrumb-current"></span>
         </nav>
+        <section class="route-journey" id="route-journey" hidden tabindex="-1" aria-labelledby="route-journey-title">
+          <div class="journey-heading">
+            <div><p class="eyebrow">Маршрут готов</p><h2 id="route-journey-title">Весь путь по шагам</h2></div>
+            <div class="journey-heading-actions"><span id="journey-meta"></span><button type="button" id="route-edit">Изменить маршрут</button></div>
+          </div>
+          <div class="journey-endpoints" aria-label="Начальная и конечная точки маршрута">
+            <div class="journey-endpoint is-origin"><span class="endpoint-marker">A</span><span><small>Откуда</small><strong id="journey-origin-name"></strong><em id="journey-origin-meta"></em></span></div>
+            <span class="endpoint-arrow" aria-hidden="true">→</span>
+            <div class="journey-endpoint is-destination"><span class="endpoint-marker">Б</span><span><small>Куда</small><strong id="journey-destination-name"></strong><em id="journey-destination-meta"></em></span></div>
+          </div>
+          <div class="journey-cards" id="journey-cards"></div>
+          <div class="journey-instructions">
+            <h3>Как пройти</h3>
+            <ol id="journey-steps"></ol>
+          </div>
+        </section>
         <div class="floor-layout">
           <aside class="floor-sidebar">
             <div class="floor-heading"><p class="eyebrow" id="floor-building-name"></p><h1 id="floor-title"></h1></div>
@@ -73,10 +89,6 @@
             <div class="data-note"><span>i</span><p>Точный план 5-го этажа корпуса 1 основан на предоставленных материалах. Остальные этажи показаны как пилотная схема по диапазонам аудиторий.</p></div>
           </section>
         </div>
-        <section class="route-journey" id="route-journey" hidden aria-labelledby="route-journey-title">
-          <div class="journey-heading"><div><p class="eyebrow">Весь путь</p><h2 id="route-journey-title">Маршрут по этажам</h2></div><span id="journey-meta"></span></div>
-          <div class="journey-cards" id="journey-cards"></div>
-        </section>
       </section>
     </main>
 

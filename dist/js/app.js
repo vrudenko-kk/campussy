@@ -27,6 +27,7 @@ const originError=$("#origin-error");
 const routeSteps=$("#route-steps");
 const routeJourney=$("#route-journey");
 const journeyCards=$("#journey-cards");
+const journeySteps=$("#journey-steps");
 
 const entrances = buildings.map(building => ({
   id:`entrance-${building.id}`,name:building.id==="c3"?"Центральный вход":`Главный вход · ${building.name}`,buildingId:building.id,floor:1,type:"entrance",verified:true,
@@ -45,6 +46,14 @@ function normalize(value) {
 function matches(query,location) {
   const haystack=normalize(`${location.id} ${location.name} ${location.aliases ?? ""} ${location.note ?? ""} ${location.zone ?? ""}`);
   return haystack.includes(normalize(query));
+}
+
+function stageWord(count) {
+  const lastTwo=count%100; const last=count%10;
+  if (lastTwo>=11 && lastTwo<=14) return "этапов";
+  if (last===1) return "этап";
+  if (last>=2 && last<=4) return "этапа";
+  return "этапов";
 }
 
 function renderSearchResults(query) {
@@ -128,6 +137,7 @@ function renderFloor() {
 
 function openFloor(buildingId,floor) {
   state.view="floor"; state.buildingId=buildingId; state.floor=Number(floor); state.route=null;
+  floorView.classList.remove("is-route-mode");
   routeJourney.hidden=true;
   campusView.hidden=true; floorView.hidden=false;
   $("#breadcrumb-current").textContent=`${buildingById(buildingId).name} · ${floor}-й этаж`;
@@ -137,6 +147,7 @@ function openFloor(buildingId,floor) {
 
 function showCampus() {
   state.view="campus"; campusView.hidden=false; floorView.hidden=true; state.route=null;
+  floorView.classList.remove("is-route-mode");
   routeJourney.hidden=true;
   routeSheet.classList.remove("is-open"); routeSheet.hidden=true; $("#route-result").hidden=true;
   requestAnimationFrame(()=>state.mapController?.resize());
@@ -214,6 +225,7 @@ function selectDestination(location) {
   $("#destination-name").textContent=location.name;
   $("#destination-meta").textContent=metaFor(location);
   resetOriginPicker();
+  floorView.classList.remove("is-route-mode");
   routeSheet.hidden=false; routeSheet.classList.add("is-open");
   $("#route-result").hidden=true;
   routeJourney.hidden=true;
@@ -221,26 +233,56 @@ function selectDestination(location) {
   originInput.focus();
 }
 
-function showRouteStage(buildingId,floor) {
+function showRouteStage(stage,index) {
+  const {buildingId,floor}=stage;
   state.view="floor"; state.buildingId=buildingId; state.floor=Number(floor);
   campusView.hidden=true; floorView.hidden=false;
   $("#breadcrumb-current").textContent=`${buildingById(buildingId).name} · ${floor}-й этаж`;
-  renderFloor(); window.scrollTo({top:0,behavior:"smooth"});
+  renderFloor();
+  journeyCards.querySelectorAll(".journey-card").forEach((card,cardIndex)=>{
+    const active=cardIndex===index; card.classList.toggle("is-active",active); card.setAttribute("aria-pressed",String(active));
+  });
+  document.querySelector(".floor-canvas-card")?.scrollIntoView({behavior:"smooth",block:"start"});
 }
 
 function renderJourney() {
-  journeyCards.replaceChildren();
+  journeyCards.replaceChildren(); journeySteps.replaceChildren();
   const stages=state.route?.stages??[];
-  if (state.route?.status!=="ready" || stages.length<=1) { routeJourney.hidden=true; return; }
-  $("#journey-meta").textContent=`${stages.length} этапов · около ${state.route.estimatedMinutes} мин`;
+  if (state.route?.status!=="ready" || !stages.length) { routeJourney.hidden=true; floorView.classList.remove("is-route-mode"); return; }
+  floorView.classList.add("is-route-mode");
+  $("#journey-meta").textContent=`${stages.length} ${stageWord(stages.length)} · около ${state.route.estimatedMinutes} мин`;
+  $("#journey-origin-name").textContent=state.origin.name;
+  $("#journey-origin-meta").textContent=metaFor(state.origin);
+  $("#journey-destination-name").textContent=state.destination.name;
+  $("#journey-destination-meta").textContent=metaFor(state.destination);
+  state.route.steps.forEach((step,index)=>{
+    const item=document.createElement("li");
+    const number=document.createElement("span"); number.className="journey-step-number"; number.setAttribute("aria-hidden","true"); number.textContent=String(index+1);
+    const copy=document.createElement("span"); copy.textContent=step;
+    item.append(number,copy); journeySteps.append(item);
+  });
   stages.forEach((stage,index)=>{
-    const card=document.createElement(stage.buildingId&&stage.floor?"button":"article");
-    if (card.tagName==="BUTTON") { card.type="button"; card.addEventListener("click",()=>showRouteStage(stage.buildingId,stage.floor)); }
-    card.className=`journey-card is-${stage.kind}`;
-    const icon=document.createElement("span"); icon.className="journey-icon"; icon.textContent=stage.kind==="vertical"?"↕":stage.kind==="transition"?"⇄":stage.role==="finish"?"Б":"A";
-    const copy=document.createElement("span"); const step=document.createElement("small"); step.textContent=`Этап ${index+1}`;
-    const title=document.createElement("strong"); title.textContent=stage.title; const summary=document.createElement("span"); summary.textContent=stage.summary;
-    copy.append(step,title,summary); card.append(icon,copy); journeyCards.append(card);
+    const card=document.createElement("button"); card.type="button"; card.className=`journey-card is-${stage.kind}${index===0?" is-active":""}`; card.setAttribute("aria-pressed",String(index===0));
+    card.addEventListener("click",()=>showRouteStage(stage,index));
+    const cardHead=document.createElement("span"); cardHead.className="journey-card-head";
+    const step=document.createElement("small"); step.textContent=`Этап ${index+1}`;
+    const type=document.createElement("b"); type.textContent=stage.kind==="vertical"?"Смена этажа":stage.kind==="transition"?"Переход между корпусами":"Участок по этажу";
+    cardHead.append(step,type);
+    const visual=document.createElement("span"); visual.className="stage-visual";
+    if (stage.kind==="vertical") {
+      visual.innerHTML=`<span class="stage-node"><b>${stage.fromFloor}</b><small>этаж</small></span><i aria-hidden="true">${stage.toFloor>stage.fromFloor?"↑":"↓"}</i><span class="stage-node"><b>${stage.toFloor}</b><small>этаж</small></span>`;
+    } else if (stage.kind==="transition") {
+      const from=buildingById(stage.fromBuildingId); const to=buildingById(stage.toBuildingId);
+      visual.innerHTML=`<span class="stage-node"><b>${from.short}</b><small>${stage.fromFloor} этаж</small></span><i aria-hidden="true">→</i><span class="stage-node"><b>${to.short}</b><small>${stage.toFloor} этаж</small></span>`;
+    } else {
+      const building=buildingById(stage.buildingId);
+      visual.innerHTML=`<span class="stage-node is-wide"><b>${building.short} корпус</b><small>${stage.floor}-й этаж</small></span><i aria-hidden="true">→</i><span class="stage-pin">${stage.role==="finish"?"Б":"A"}</span>`;
+    }
+    const title=document.createElement("strong"); title.className="journey-card-title"; title.textContent=stage.title;
+    const summary=document.createElement("span"); summary.className="journey-card-summary"; summary.textContent=stage.summary;
+    const detail=document.createElement("span"); detail.className="journey-card-detail"; detail.textContent=stage.detail??"Нажмите, чтобы открыть план этого участка.";
+    const action=document.createElement("span"); action.className="journey-card-action"; action.textContent="Показать на плане →";
+    card.append(cardHead,visual,title,summary,detail,action); journeyCards.append(card);
   });
   routeJourney.hidden=false;
 }
@@ -251,16 +293,22 @@ function renderRouteResult() {
   const title=$("#route-result-title");
   title.textContent=state.route.status==="ready"?"Маршрут построен":state.route.status==="same"?"Вы уже на месте":"Нужна проверка данных";
   $("#route-result-meta").textContent=state.route.status==="ready"?`Кратчайший путь · около ${state.route.estimatedMinutes} мин`:"";
-  if (state.destination?.buildingId && state.destination?.floor) {
+  const firstStage=state.route.status==="ready"?state.route.stages?.find(stage=>stage.buildingId&&stage.floor):null;
+  const focusedLocation=firstStage??state.destination;
+  if (focusedLocation?.buildingId && focusedLocation?.floor) {
     state.view="floor";
-    state.buildingId=state.destination.buildingId;
-    state.floor=Number(state.destination.floor);
+    state.buildingId=focusedLocation.buildingId;
+    state.floor=Number(focusedLocation.floor);
     campusView.hidden=true;
     floorView.hidden=false;
     $("#breadcrumb-current").textContent=`${buildingById(state.buildingId).name} · ${state.floor}-й этаж`;
     renderFloor();
   }
   renderJourney();
+  if (state.route.status==="ready") {
+    closeRouteSheet();
+    requestAnimationFrame(()=>routeJourney.scrollIntoView({behavior:"smooth",block:"start"}));
+  }
 }
 
 function buildSelectedRoute() {
@@ -278,6 +326,13 @@ function buildSelectedRoute() {
 
 function closeRouteSheet() {
   routeSheet.classList.remove("is-open"); routeSheet.hidden=true; setOriginPickerOpen(false);
+}
+
+function openRouteEditor() {
+  routeSheet.hidden=false;
+  requestAnimationFrame(()=>routeSheet.classList.add("is-open"));
+  $("#route-result").hidden=true;
+  originInput.focus();
 }
 
 function renderFallbackMap() {
@@ -326,6 +381,7 @@ async function init() {
   originInput.addEventListener("input",()=>{
     state.origin=null; state.route=null; delete originInput.dataset.locationId; originError.hidden=true; $("#route-result").hidden=true;
     routeJourney.hidden=true;
+    floorView.classList.remove("is-route-mode");
     if (state.view==="floor") renderFloor();
     renderOriginResults();
   });
@@ -347,6 +403,7 @@ async function init() {
   $("#brand-home").addEventListener("click",showCampus);
   $("#route-build").addEventListener("click",buildSelectedRoute);
   $("#route-close").addEventListener("click",closeRouteSheet);
+  $("#route-edit").addEventListener("click",openRouteEditor);
   $("#search-clear").addEventListener("click",()=>{ search.value=""; search.focus(); searchResults.hidden=true; });
   document.querySelectorAll("[data-facility]").forEach(button=>button.addEventListener("click",()=>selectDestination(sharedFacilities.find(item=>item.id===button.dataset.facility))));
   try {

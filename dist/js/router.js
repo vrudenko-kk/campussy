@@ -110,18 +110,20 @@ function buildStages(origin,destination,groups) {
   const stages=[{
     kind:"floor",role:"start",buildingId:origin.buildingId,floor:origin.floor,
     title:`${buildingById(origin.buildingId).name} · ${origin.floor}-й этаж`,
-    summary:`От «${origin.name}» к следующей точке маршрута`,points:floorStagePoints(origin,"start"),
+    summary:`От «${origin.name}» к следующей точке маршрута`,
+    detail:`Выйдите из «${origin.name}» в основной коридор и следуйте к отмеченной точке перехода.`,
+    points:floorStagePoints(origin,"start"),
   }];
   groups.forEach(group=>{
     const from=nodeFromKey(group.from); const to=nodeFromKey(group.to);
     if (group.kind==="vertical") {
-      stages.push({kind:"vertical",buildingId:to.buildingId,floor:to.floor,fromFloor:from.floor,toFloor:to.floor,title:`${buildingById(to.buildingId).name} · этажи ${from.floor} → ${to.floor}`,summary:to.floor>from.floor?"Подъём по лестнице или на лифте":"Спуск по лестнице или на лифте"});
+      stages.push({kind:"vertical",buildingId:to.buildingId,floor:to.floor,fromFloor:from.floor,toFloor:to.floor,title:`${buildingById(to.buildingId).name} · этажи ${from.floor} → ${to.floor}`,summary:to.floor>from.floor?"Подъём по лестнице или на лифте":"Спуск по лестнице или на лифте",detail:verticalText(group)});
     } else {
-      stages.push({kind:"transition",buildingId:to.buildingId,floor:to.floor,fromBuildingId:from.buildingId,fromFloor:from.floor,toBuildingId:to.buildingId,toFloor:to.floor,title:group.transition.name,summary:`${buildingById(from.buildingId).name}, ${from.floor}-й этаж → ${buildingById(to.buildingId).name}, ${to.floor}-й этаж`});
+      stages.push({kind:"transition",buildingId:to.buildingId,floor:to.floor,fromBuildingId:from.buildingId,fromFloor:from.floor,toBuildingId:to.buildingId,toFloor:to.floor,title:group.transition.name,summary:`${buildingById(from.buildingId).name}, ${from.floor}-й этаж → ${buildingById(to.buildingId).name}, ${to.floor}-й этаж`,detail:transitionText(group)});
     }
   });
   if (origin.buildingId!==destination.buildingId || origin.floor!==destination.floor) {
-    stages.push({kind:"floor",role:"finish",buildingId:destination.buildingId,floor:destination.floor,title:`${buildingById(destination.buildingId).name} · ${destination.floor}-й этаж`,summary:`До «${destination.name}»`,points:floorStagePoints(destination,"finish")});
+    stages.push({kind:"floor",role:"finish",buildingId:destination.buildingId,floor:destination.floor,title:`${buildingById(destination.buildingId).name} · ${destination.floor}-й этаж`,summary:`До «${destination.name}»`,detail:`На ${destination.floor}-м этаже следуйте по отмеченному участку маршрута до «${destination.name}».`,points:floorStagePoints(destination,"finish")});
   }
   return stages;
 }
@@ -139,7 +141,7 @@ export function buildRoute(origin,destination) {
     const points=sameFloorPoints(origin,destination);
     return {
       status:"ready",kind:"same-floor",points,estimatedMinutes:2,
-      stages:[{kind:"floor",role:"complete",buildingId:origin.buildingId,floor:origin.floor,title:`${buildingById(origin.buildingId).name} · ${origin.floor}-й этаж`,summary:`${origin.name} → ${destination.name}`,points}],
+      stages:[{kind:"floor",role:"complete",buildingId:origin.buildingId,floor:origin.floor,title:`${buildingById(origin.buildingId).name} · ${origin.floor}-й этаж`,summary:`${origin.name} → ${destination.name}`,detail:`Весь маршрут проходит на ${origin.floor}-м этаже. Следуйте по синей линии на плане.`,points}],
       steps:points?sameFloorInstructions(origin,destination):[`Выйдите из «${origin.name}» в коридор.`,`Следуйте по указателям до «${destination.name}».`],
     };
   }
