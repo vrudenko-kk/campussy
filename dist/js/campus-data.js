@@ -3,7 +3,7 @@ export const campus = {
   name: "Кампус на Вешняковском",
   address: "Москва, 4-й Вешняковский проезд, 4",
   center: [37.79561, 55.71812],
-  checkpoint: [37.79558, 55.71756],
+  checkpoint: [37.7951911, 55.7187065],
   sources: {
     outdoor: "© OpenStreetMap contributors, ODbL",
     indoor: "fin-university-map.framer.website",
