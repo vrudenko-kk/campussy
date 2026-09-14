@@ -21,7 +21,9 @@ const searchResults=$("#search-results");
 const buildingPanel=$("#building-panel");
 const floorSvg=$("#floor-map");
 const routeSheet=$("#route-sheet");
-const originSelect=$("#origin-select");
+const originInput=$("#origin-input");
+const originResults=$("#origin-results");
+const originError=$("#origin-error");
 const routeSteps=$("#route-steps");
 
 const entrances = buildings.map(building => ({
@@ -127,17 +129,69 @@ function showCampus() {
   requestAnimationFrame(()=>state.mapController?.resize());
 }
 
-function populateOriginOptions(destination) {
-  originSelect.replaceChildren();
-  const placeholder=document.createElement("option"); placeholder.value=""; placeholder.textContent="Выберите начальную точку"; placeholder.disabled=true; placeholder.selected=true; originSelect.append(placeholder);
-  const relevant=[...originLocations].sort((a,b)=>{
+function sortedOrigins(destination=state.destination) {
+  return [...originLocations].sort((a,b)=>{
     const scoreA=(a.buildingId===destination.buildingId?2:0)+(a.floor===destination.floor?1:0);
     const scoreB=(b.buildingId===destination.buildingId?2:0)+(b.floor===destination.floor?1:0);
     return scoreB-scoreA || a.name.localeCompare(b.name,"ru",{numeric:true});
   });
-  relevant.forEach(location=>{
-    const option=document.createElement("option"); option.value=location.id; option.textContent=`${location.name} — ${metaFor(location)}`; originSelect.append(option);
+}
+
+function originMatches(query) {
+  const value=normalize(query);
+  const candidates=sortedOrigins();
+  if (!value) return candidates.slice(0,8);
+  return candidates.filter(location=>matches(value,location)).slice(0,8);
+}
+
+function setOriginPickerOpen(open) {
+  originResults.hidden=!open;
+  originInput.setAttribute("aria-expanded",String(open));
+}
+
+function selectOrigin(location,{focus=true}={}) {
+  state.origin=location;
+  originInput.value=location.name;
+  originInput.dataset.locationId=location.id;
+  originError.hidden=true;
+  setOriginPickerOpen(false);
+  if (focus) originInput.focus();
+}
+
+function renderOriginResults(query=originInput.value) {
+  originResults.replaceChildren();
+  const results=originMatches(query);
+  if (!results.length) {
+    const empty=document.createElement("div"); empty.className="origin-empty"; empty.textContent="Точка не найдена. Проверьте номер или название.";
+    originResults.append(empty); setOriginPickerOpen(true); return;
+  }
+  results.forEach(location=>{
+    const button=document.createElement("button"); button.type="button"; button.className="origin-result"; button.setAttribute("role","option");
+    const title=document.createElement("strong"); title.textContent=location.name;
+    const meta=document.createElement("span"); meta.textContent=metaFor(location);
+    button.append(title,meta); button.addEventListener("click",()=>selectOrigin(location)); originResults.append(button);
   });
+  setOriginPickerOpen(true);
+}
+
+function resetOriginPicker() {
+  state.origin=null;
+  originInput.value="";
+  delete originInput.dataset.locationId;
+  originError.hidden=true;
+  originResults.replaceChildren();
+  setOriginPickerOpen(false);
+}
+
+function resolveOrigin() {
+  const value=normalize(originInput.value);
+  if (!value) return null;
+  if (state.origin && originInput.dataset.locationId===state.origin.id && normalize(state.origin.name)===value) return state.origin;
+  const exact=originLocations.find(location=>normalize(location.id)===value || normalize(location.name)===value);
+  if (exact) { selectOrigin(exact,{focus:false}); return exact; }
+  const candidates=originMatches(value);
+  if (candidates.length===1) { selectOrigin(candidates[0],{focus:false}); return candidates[0]; }
+  return null;
 }
 
 function selectDestination(location) {
@@ -145,11 +199,11 @@ function selectDestination(location) {
   search.value=location.name; searchResults.hidden=true;
   $("#destination-name").textContent=location.name;
   $("#destination-meta").textContent=metaFor(location);
-  populateOriginOptions(location);
+  resetOriginPicker();
   routeSheet.hidden=false; routeSheet.classList.add("is-open");
   $("#route-result").hidden=true;
   if (location.buildingId && location.floor) openFloor(location.buildingId,location.floor);
-  originSelect.focus();
+  originInput.focus();
 }
 
 function renderRouteResult() {
@@ -169,8 +223,13 @@ function renderRouteResult() {
 }
 
 function buildSelectedRoute() {
-  const origin=originLocations.find(location=>location.id===originSelect.value);
-  if (!origin) { originSelect.focus(); return; }
+  const origin=resolveOrigin();
+  if (!origin) {
+    originError.hidden=false;
+    renderOriginResults();
+    originInput.focus();
+    return;
+  }
   state.origin=origin;
   state.route=buildRoute(origin,state.destination);
   renderRouteResult();
@@ -208,7 +267,7 @@ function registerWebMcp() {
       if(!origin||!destination) throw new Error("Unknown originId or destinationId");
       state.destination=destination; state.origin=origin; state.route=buildRoute(origin,destination); search.value=destination.name;
       $("#destination-name").textContent=destination.name; $("#destination-meta").textContent=metaFor(destination);
-      populateOriginOptions(destination); originSelect.value=origin.id;
+      resetOriginPicker(); selectOrigin(origin,{focus:false});
       routeSheet.hidden=false; routeSheet.classList.add("is-open"); renderRouteResult();
       return {status:state.route.status,kind:state.route.kind??null,steps:state.route.steps};
     },
@@ -224,7 +283,25 @@ async function init() {
   renderBuildingPanel();
   search.addEventListener("input",()=>renderSearchResults(search.value));
   search.addEventListener("keydown",event=>{ if(event.key==="Escape") searchResults.hidden=true; });
+  originInput.addEventListener("input",()=>{
+    state.origin=null; state.route=null; delete originInput.dataset.locationId; originError.hidden=true; $("#route-result").hidden=true;
+    if (state.view==="floor") renderFloor();
+    renderOriginResults();
+  });
+  originInput.addEventListener("focus",()=>renderOriginResults());
+  originInput.addEventListener("keydown",event=>{
+    if (event.key==="Escape") { setOriginPickerOpen(false); return; }
+    if (event.key==="ArrowDown") { event.preventDefault(); originResults.querySelector("button")?.focus(); return; }
+    if (event.key==="Enter") { event.preventDefault(); buildSelectedRoute(); }
+  });
+  originResults.addEventListener("keydown",event=>{
+    const buttons=[...originResults.querySelectorAll("button")]; const index=buttons.indexOf(document.activeElement);
+    if (event.key==="ArrowDown") { event.preventDefault(); buttons[(index+1)%buttons.length]?.focus(); }
+    if (event.key==="ArrowUp") { event.preventDefault(); (index<=0?originInput:buttons[index-1])?.focus(); }
+    if (event.key==="Escape") { setOriginPickerOpen(false); originInput.focus(); }
+  });
   document.addEventListener("click",event=>{ if(!event.target.closest(".search-shell")) searchResults.hidden=true; });
+  document.addEventListener("click",event=>{ if(!event.target.closest(".origin-combobox")) setOriginPickerOpen(false); });
   $("#back-to-campus").addEventListener("click",showCampus);
   $("#brand-home").addEventListener("click",showCampus);
   $("#route-build").addEventListener("click",buildSelectedRoute);

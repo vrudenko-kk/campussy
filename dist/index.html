@@ -77,7 +77,14 @@
     <aside class="route-sheet" id="route-sheet" hidden aria-labelledby="route-sheet-title">
       <div class="route-sheet-head"><div><p class="eyebrow">Маршрут</p><h2 id="route-sheet-title">Куда вы идёте</h2></div><button type="button" id="route-close" aria-label="Закрыть построение маршрута">×</button></div>
       <div class="destination-card"><span class="pin">●</span><div><strong id="destination-name"></strong><small id="destination-meta"></small></div></div>
-      <div class="route-field"><label for="origin-select">Откуда нужно пройти</label><select id="origin-select"></select></div>
+      <div class="route-field">
+        <label for="origin-input">Откуда нужно пройти</label>
+        <div class="origin-combobox">
+          <input id="origin-input" type="search" autocomplete="off" placeholder="Введите аудиторию или вход" role="combobox" aria-autocomplete="list" aria-controls="origin-results" aria-expanded="false" />
+          <div class="origin-results" id="origin-results" role="listbox" hidden></div>
+        </div>
+        <p class="route-field-error" id="origin-error" hidden>Выберите точку из найденных вариантов.</p>
+      </div>
       <button type="button" class="button button-primary" id="route-build">Построить маршрут</button>
       <section class="route-result" id="route-result" hidden aria-live="polite">
         <h3 id="route-result-title"></h3>
