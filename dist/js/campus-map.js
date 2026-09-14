@@ -32,6 +32,11 @@ export async function createCampusMap(container,onBuildingSelect,onCheckpointSel
   }));
 
   map.on("load",() => {
+    // Убираем подписи POI базовой карты: длинное название университета
+    // накладывается на нашу корпусную схему и дублирует её навигацию.
+    ["poi_r20","poi_r7","poi_r1"].forEach(layerId=>{
+      if (map.getLayer(layerId)) map.setLayoutProperty(layerId,"visibility","none");
+    });
     map.addSource("campus-buildings",{type:"geojson",data:buildingGeoJSON,promoteId:"id"});
     map.addLayer({
       id:"campus-buildings-shadow",type:"fill-extrusion",source:"campus-buildings",
