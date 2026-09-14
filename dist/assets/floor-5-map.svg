@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2000 1040" role="img" aria-labelledby="title desc">
+  <title id="title">Векторная карта пятого этажа корпуса 1</title>
+  <desc id="desc">Цифровая схема пятого этажа корпуса 1 по плану эвакуации: западное и восточное крылья, центральный коридор, два лестничных узла и выходы.</desc>
+  <style>
+    .canvas { fill: #f8fafc; }
+    .room { fill: #e8eef5; stroke: #1e293b; stroke-width: 8; stroke-linejoin: round; }
+    .corridor { fill: #ffffff; stroke: #0f172a; stroke-width: 9; stroke-linejoin: round; }
+    .stair { fill: #cbd5e1; stroke: #0f172a; stroke-width: 9; stroke-linejoin: round; }
+    .step { stroke: #475569; stroke-width: 4; }
+    .door { fill: none; stroke: #0f766e; stroke-width: 7; stroke-linecap: square; }
+    .exit { fill: #15803d; }
+    .node { fill: #2563eb; stroke: #ffffff; stroke-width: 5; }
+    .anchor { fill: #64748b; }
+    .heading { font: 700 38px Arial, sans-serif; fill: #0f172a; }
+    .subheading { font: 400 22px Arial, sans-serif; fill: #475569; }
+    .label { font: 700 17px Arial, sans-serif; fill: #ffffff; }
+    .legend { font: 400 18px Arial, sans-serif; fill: #334155; }
+    .note { font: 400 17px Arial, sans-serif; fill: #64748b; }
+  </style>
+
+  <rect width="2000" height="1040" class="canvas"/>
+  <text x="75" y="73" class="heading">Корпус 1 · 5-й этаж</text>
+  <text x="75" y="108" class="subheading">Векторная карта по плану эвакуации · контуры помещений требуют сверки с техническим планом</text>
+
+  <!-- Западное крыло -->
+  <g id="wing-west" aria-label="Западное крыло">
+    <path d="M90 260 H435 V330 H500 V480 H90 Z" class="room" data-room-id="f5-west-north"/>
+    <path d="M90 500 H500 V675 H90 Z" class="room" data-room-id="f5-west-south"/>
+    <path d="M435 330 V420 H500" class="door"/>
+  </g>
+
+  <!-- Западная лестничная клетка -->
+  <g id="stair-west" data-node-id="f5-stairs-west" aria-label="Западная лестница">
+    <path d="M515 205 H670 V470 H610 V525 H515 Z" class="stair"/>
+    <path d="M535 230 H650 M535 248 H650 M535 266 H650 M535 284 H650 M535 302 H650 M535 320 H650 M535 338 H650 M535 356 H650 M535 374 H650 M535 392 H650 M535 410 H650" class="step"/>
+    <rect x="535" y="432" width="98" height="42" rx="3" class="exit" data-node-id="f5-exit-west"/>
+    <text x="584" y="460" text-anchor="middle" class="label">ВЫХОД</text>
+  </g>
+
+  <!-- Северный ряд помещений -->
+  <g id="north-rooms" aria-label="Северная часть этажа">
+    <path d="M680 350 H945 V485 H680 Z" class="room" data-room-id="f5-n-01"/>
+    <path d="M945 350 H1110 V485 H945 Z" class="room" data-room-id="f5-n-02"/>
+    <path d="M1110 350 H1300 V485 H1110 Z" class="room" data-room-id="f5-n-03"/>
+    <path d="M1300 350 H1410 V485 H1300 Z" class="room" data-room-id="f5-n-04"/>
+    <path d="M790 485 v-38 M1025 485 v-38 M1205 485 v-38 M1355 485 v-38" class="door"/>
+  </g>
+
+  <!-- Основной коридор -->
+  <g id="main-corridor" data-zone-id="f5-main-corridor" aria-label="Основной коридор">
+    <path d="M500 500 H1510 V610 H500 Z" class="corridor"/>
+    <path d="M500 500 V435 H515 M1410 500 V435 H1510" class="corridor"/>
+  </g>
+
+  <!-- Южный ряд помещений -->
+  <g id="south-rooms" aria-label="Южная часть этажа">
+    <path d="M530 620 H670 V785 H530 Z" class="room" data-room-id="f5-s-01"/>
+    <path d="M680 620 H825 V785 H680 Z" class="room" data-room-id="f5-s-02"/>
+    <path d="M835 620 H1040 V785 H835 Z" class="room" data-room-id="f5-s-03"/>
+    <path d="M1050 620 H1235 V785 H1050 Z" class="room" data-room-id="f5-s-04"/>
+    <path d="M1245 620 H1410 V785 H1245 Z" class="room" data-room-id="f5-s-05"/>
+    <path d="M600 620v43 M750 620v43 M940 620v43 M1140 620v43 M1325 620v43" class="door"/>
+  </g>
+
+  <!-- Восточная лестничная клетка -->
+  <g id="stair-east" data-node-id="f5-stairs-east" aria-label="Восточная лестница">
+    <path d="M1410 205 H1560 V470 H1505 V525 H1410 Z" class="stair"/>
+    <path d="M1430 230 H1540 M1430 248 H1540 M1430 266 H1540 M1430 284 H1540 M1430 302 H1540 M1430 320 H1540 M1430 338 H1540 M1430 356 H1540 M1430 374 H1540 M1430 392 H1540 M1430 410 H1540" class="step"/>
+    <rect x="1430" y="432" width="98" height="42" rx="3" class="exit" data-node-id="f5-exit-east"/>
+    <text x="1479" y="460" text-anchor="middle" class="label">ВЫХОД</text>
+  </g>
+
+  <!-- Восточное крыло -->
+  <g id="wing-east" aria-label="Восточное крыло">
+    <path d="M1560 260 H1890 V490 H1560 Z" class="room" data-room-id="f5-east-north"/>
+    <path d="M1560 500 H1890 V675 H1560 Z" class="room" data-room-id="f5-east-south"/>
+    <path d="M1560 350 H1620 V420 H1560 M1560 565 H1620 V610 H1560" class="door"/>
+  </g>
+
+  <!-- Малые технические и переходные зоны по контуру плана -->
+  <g id="service-zones" aria-label="Переходные зоны">
+    <path d="M475 610 H530 V785 H475 Z" class="corridor" data-zone-id="f5-west-link"/>
+    <path d="M1410 610 H1510 V785 H1410 Z" class="corridor" data-zone-id="f5-east-link"/>
+    <path d="M515 675 H475 M1510 675 H1560" class="door"/>
+  </g>
+
+  <!-- Узлы графа: точки маршрутизации -->
+  <g id="routing-nodes" aria-label="Узлы маршрутизации">
+    <circle cx="550" cy="555" r="13" class="node" data-node-id="f5-junction-west"/>
+    <circle cx="760" cy="555" r="13" class="node" data-node-id="f5-junction-1"/>
+    <circle cx="1030" cy="555" r="13" class="node" data-node-id="f5-junction-2"/>
+    <circle cx="1280" cy="555" r="13" class="node" data-node-id="f5-junction-3"/>
+    <circle cx="1465" cy="555" r="13" class="node" data-node-id="f5-junction-east"/>
+    <circle cx="500" cy="690" r="11" class="node" data-node-id="f5-junction-southwest"/>
+    <circle cx="1465" cy="690" r="11" class="node" data-node-id="f5-junction-southeast"/>
+  </g>
+
+  <!-- Легенда -->
+  <g transform="translate(75 895)">
+    <rect x="0" y="-20" width="34" height="24" class="room"/>
+    <text x="49" y="0" class="legend">помещение</text>
+    <rect x="250" y="-20" width="34" height="24" class="corridor"/>
+    <text x="299" y="0" class="legend">коридор</text>
+    <rect x="510" y="-20" width="34" height="24" class="stair"/>
+    <text x="559" y="0" class="legend">лестница</text>
+    <rect x="760" y="-20" width="34" height="24" class="exit"/>
+    <text x="809" y="0" class="legend">эвакуационный выход</text>
+    <circle cx="1118" cy="-8" r="12" class="node"/>
+    <text x="1141" y="0" class="legend">узел маршрута</text>
+  </g>
+  <text x="75" y="965" class="note">Источник: фотография плана эвакуации. Схема предназначена для прототипа навигации и не заменяет официальный план эвакуации.</text>
+</svg>
