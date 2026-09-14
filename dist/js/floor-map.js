@@ -7,13 +7,19 @@ function svgNode(tag,attributes={}) {
   return node;
 }
 
-function positionGeneric(locations,index) {
-  const count=Math.max(locations.length,1);
-  const columns=Math.ceil(count/2);
-  const row=index<columns?0:1;
-  const local=index%columns;
+function positionGeneric(location,index,buildingId) {
+  const suffix=Number.parseInt(location.id,10)%100;
+  const canonical=buildingId==="c1" && suffix>=2 && suffix<=17
+    ? suffix-2
+    : buildingId==="c2" && suffix>=18 && suffix<=33
+      ? suffix-18
+      : index;
+  const columns=8;
+  const row=Math.floor(canonical/columns)%2;
+  const localBase=canonical%columns;
+  const local=buildingId==="c2"?columns-1-localBase:localBase;
   const usable=1550;
-  const width=Math.max(90,usable/columns);
+  const width=usable/columns;
   const x=225+local*width;
   const y=row===0?240:610;
   const door=[x+width/2,row===0?470:570];
@@ -47,21 +53,24 @@ export function renderFloorMap(svg,{buildingId,floor,route,destinationId,originI
     const corridor=svgNode("rect",{x:165,y:470,width:1670,height:100,rx:18,class:"floor-corridor"}); svg.append(corridor);
     const stairWest=svgNode("rect",{x:65,y:330,width:100,height:240,rx:12,class:"floor-stair"});
     const stairEast=svgNode("rect",{x:1835,y:330,width:100,height:240,rx:12,class:"floor-stair"}); svg.append(stairWest,stairEast);
+    shown=[...shown].sort((a,b)=>a.id.localeCompare(b.id,"ru",{numeric:true}));
     const prioritized=shown.filter(location=>[destinationId,originId].includes(location.id));
-    shown=[...prioritized,...shown.filter(location=>![destinationId,originId].includes(location.id))].slice(0,16);
+    shown=[...prioritized,...shown.filter(location=>![destinationId,originId].includes(location.id))].slice(0,18);
     shown.forEach((location,index)=>{
-      const p=positionGeneric(shown,index);
+      const p=positionGeneric(location,index,buildingId);
       location.point=[p.label[0],p.label[1]]; location.door=p.door;
       const room=svgNode("rect",{x:p.x,y:p.y,width:p.width,height:p.height,rx:8,class:`floor-room${location.id===destinationId?" is-destination":""}${location.id===originId?" is-origin":""}`});
-      const label=svgNode("text",{x:p.label[0],y:p.label[1],class:"floor-room-label"}); label.textContent=location.id;
+      const label=svgNode("text",{x:p.label[0],y:p.label[1],class:"floor-room-label"}); label.textContent=location.mapLabel??location.id;
       svg.append(room,label);
     });
   }
 
-  if (route?.points?.length) {
+  const floorStage=route?.stages?.find(stage=>stage.kind==="floor" && stage.buildingId===buildingId && Number(stage.floor)===Number(floor));
+  const displayedPoints=route?.points?.length?route.points:floorStage?.points;
+  if (displayedPoints?.length) {
     const routePoints=buildingId==="c1" && Number(floor)===5
-      ? route.points.map(([x,y])=>[x,y-62])
-      : route.points;
+      ? displayedPoints.map(([x,y])=>[x,y-62])
+      : displayedPoints;
     const value=routePoints.map(point=>point.join(",")).join(" ");
     svg.append(svgNode("polyline",{points:value,class:"floor-route-halo"}),svgNode("polyline",{points:value,class:"floor-route"}));
     const markers=svgNode("g"); addMarker(markers,routePoints[0],"A","route-start"); addMarker(markers,routePoints.at(-1),"Б","route-end"); svg.append(markers);

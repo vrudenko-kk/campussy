@@ -1,4 +1,4 @@
-import { allSearchable, buildings, buildingById, campus, locationById, locations, locationsOnFloor, sharedFacilities } from "./campus-data.js";
+import { allSearchable, buildings, buildingById, campus, locationById, locations, locationsOnFloor, sharedFacilities, transitions } from "./campus-data.js";
 import { createCampusMap } from "./campus-map.js";
 import { renderFloorMap } from "./floor-map.js";
 import { buildRoute } from "./router.js";
@@ -25,11 +25,13 @@ const originInput=$("#origin-input");
 const originResults=$("#origin-results");
 const originError=$("#origin-error");
 const routeSteps=$("#route-steps");
+const routeJourney=$("#route-journey");
+const journeyCards=$("#journey-cards");
 
 const entrances = buildings.map(building => ({
-  id:`entrance-${building.id}`,name:`Главный вход · ${building.name}`,buildingId:building.id,floor:1,type:"entrance",verified:true,
+  id:`entrance-${building.id}`,name:building.id==="c3"?"Центральный вход":`Главный вход · ${building.name}`,buildingId:building.id,floor:1,type:"entrance",verified:true,
 }));
-const originLocations=[...entrances,...locations];
+const originLocations=[...entrances,...locations,...sharedFacilities.filter(location=>location.buildingId)];
 
 function metaFor(location) {
   if (location.buildingId) return `${buildingById(location.buildingId).name} · ${location.floor}-й этаж`;
@@ -41,7 +43,7 @@ function normalize(value) {
 }
 
 function matches(query,location) {
-  const haystack=normalize(`${location.id} ${location.name} ${location.note ?? ""} ${location.zone ?? ""}`);
+  const haystack=normalize(`${location.id} ${location.name} ${location.aliases ?? ""} ${location.note ?? ""} ${location.zone ?? ""}`);
   return haystack.includes(normalize(query));
 }
 
@@ -74,6 +76,12 @@ function renderBuildingPanel() {
   const eyebrow=document.createElement("p"); eyebrow.className="eyebrow"; eyebrow.textContent="Выбранный корпус";
   const heading=document.createElement("h2"); heading.textContent=building.name;
   const note=document.createElement("p"); note.className="panel-note"; note.textContent=`${building.floors.length} этажей · ${building.entrance}`;
+  const buildingTransitions=transitions.filter(transition=>transition.from.buildingId===building.id || transition.to.buildingId===building.id);
+  const connections=document.createElement("div"); connections.className="connection-list";
+  buildingTransitions.forEach(transition=>{
+    const fromHere=transition.from.buildingId===building.id; const local=fromHere?transition.from:transition.to; const remote=fromHere?transition.to:transition.from;
+    const item=document.createElement("span"); item.innerHTML=`<b>↔</b><span>${local.floor}-й этаж → ${buildingById(remote.buildingId).name}, ${remote.floor}-й этаж<small>${transition.short}</small></span>`; connections.append(item);
+  });
   const floors=document.createElement("div"); floors.className="floor-grid"; floors.setAttribute("aria-label","Выбор этажа");
   building.floors.forEach(floor=>{
     const button=document.createElement("button"); button.type="button"; button.className="floor-button"; button.textContent=`${floor}`; button.setAttribute("aria-label",`${floor}-й этаж`);
@@ -81,8 +89,10 @@ function renderBuildingPanel() {
   });
   const action=document.createElement("button"); action.type="button"; action.className="button button-primary"; action.textContent=`Открыть ${building.id==="c3"?"2-й":"1-й"} этаж`;
   action.addEventListener("click",()=>openFloor(building.id,building.id==="c3"?2:1));
-  buildingPanel.append(eyebrow,heading,note,floors,action);
-  document.querySelectorAll(".building-chip").forEach(button=>button.classList.toggle("is-active",button.dataset.building===building.id));
+  buildingPanel.append(eyebrow,heading,note,connections,floors,action);
+  document.querySelectorAll(".building-chip").forEach(button=>{
+    const active=button.dataset.building===building.id; button.classList.toggle("is-active",active); button.setAttribute("aria-pressed",String(active));
+  });
 }
 
 function renderFloorControls() {
@@ -102,7 +112,7 @@ function renderFloorControls() {
   } else {
     visible.forEach(location=>{
       const button=document.createElement("button"); button.type="button"; button.className="location-row";
-      const number=document.createElement("span"); number.className="location-number"; number.textContent=location.id;
+      const number=document.createElement("span"); number.className="location-number"; number.textContent=location.mapLabel??location.id;
       const content=document.createElement("span");
       const title=document.createElement("strong"); title.textContent=location.name;
       const meta=document.createElement("small"); meta.textContent=location.note;
@@ -118,6 +128,7 @@ function renderFloor() {
 
 function openFloor(buildingId,floor) {
   state.view="floor"; state.buildingId=buildingId; state.floor=Number(floor); state.route=null;
+  routeJourney.hidden=true;
   campusView.hidden=true; floorView.hidden=false;
   $("#breadcrumb-current").textContent=`${buildingById(buildingId).name} · ${floor}-й этаж`;
   renderFloor();
@@ -126,7 +137,10 @@ function openFloor(buildingId,floor) {
 
 function showCampus() {
   state.view="campus"; campusView.hidden=false; floorView.hidden=true; state.route=null;
+  routeJourney.hidden=true;
+  routeSheet.classList.remove("is-open"); routeSheet.hidden=true; $("#route-result").hidden=true;
   requestAnimationFrame(()=>state.mapController?.resize());
+  window.scrollTo({top:0,behavior:"smooth"});
 }
 
 function sortedOrigins(destination=state.destination) {
@@ -202,8 +216,33 @@ function selectDestination(location) {
   resetOriginPicker();
   routeSheet.hidden=false; routeSheet.classList.add("is-open");
   $("#route-result").hidden=true;
+  routeJourney.hidden=true;
   if (location.buildingId && location.floor) openFloor(location.buildingId,location.floor);
   originInput.focus();
+}
+
+function showRouteStage(buildingId,floor) {
+  state.view="floor"; state.buildingId=buildingId; state.floor=Number(floor);
+  campusView.hidden=true; floorView.hidden=false;
+  $("#breadcrumb-current").textContent=`${buildingById(buildingId).name} · ${floor}-й этаж`;
+  renderFloor(); window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function renderJourney() {
+  journeyCards.replaceChildren();
+  const stages=state.route?.stages??[];
+  if (state.route?.status!=="ready" || stages.length<=1) { routeJourney.hidden=true; return; }
+  $("#journey-meta").textContent=`${stages.length} этапов · около ${state.route.estimatedMinutes} мин`;
+  stages.forEach((stage,index)=>{
+    const card=document.createElement(stage.buildingId&&stage.floor?"button":"article");
+    if (card.tagName==="BUTTON") { card.type="button"; card.addEventListener("click",()=>showRouteStage(stage.buildingId,stage.floor)); }
+    card.className=`journey-card is-${stage.kind}`;
+    const icon=document.createElement("span"); icon.className="journey-icon"; icon.textContent=stage.kind==="vertical"?"↕":stage.kind==="transition"?"⇄":stage.role==="finish"?"Б":"A";
+    const copy=document.createElement("span"); const step=document.createElement("small"); step.textContent=`Этап ${index+1}`;
+    const title=document.createElement("strong"); title.textContent=stage.title; const summary=document.createElement("span"); summary.textContent=stage.summary;
+    copy.append(step,title,summary); card.append(icon,copy); journeyCards.append(card);
+  });
+  routeJourney.hidden=false;
 }
 
 function renderRouteResult() {
@@ -211,6 +250,7 @@ function renderRouteResult() {
   state.route.steps.forEach(step=>{ const item=document.createElement("li"); item.textContent=step; routeSteps.append(item); });
   const title=$("#route-result-title");
   title.textContent=state.route.status==="ready"?"Маршрут построен":state.route.status==="same"?"Вы уже на месте":"Нужна проверка данных";
+  $("#route-result-meta").textContent=state.route.status==="ready"?`Кратчайший путь · около ${state.route.estimatedMinutes} мин`:"";
   if (state.destination?.buildingId && state.destination?.floor) {
     state.view="floor";
     state.buildingId=state.destination.buildingId;
@@ -220,6 +260,7 @@ function renderRouteResult() {
     $("#breadcrumb-current").textContent=`${buildingById(state.buildingId).name} · ${state.floor}-й этаж`;
     renderFloor();
   }
+  renderJourney();
 }
 
 function buildSelectedRoute() {
@@ -236,8 +277,7 @@ function buildSelectedRoute() {
 }
 
 function closeRouteSheet() {
-  routeSheet.classList.remove("is-open"); routeSheet.hidden=true; state.destination=null; state.origin=null; state.route=null;
-  if (state.view==="floor") renderFloor();
+  routeSheet.classList.remove("is-open"); routeSheet.hidden=true; setOriginPickerOpen(false);
 }
 
 function renderFallbackMap() {
@@ -269,7 +309,7 @@ function registerWebMcp() {
       $("#destination-name").textContent=destination.name; $("#destination-meta").textContent=metaFor(destination);
       resetOriginPicker(); selectOrigin(origin,{focus:false});
       routeSheet.hidden=false; routeSheet.classList.add("is-open"); renderRouteResult();
-      return {status:state.route.status,kind:state.route.kind??null,steps:state.route.steps};
+      return {status:state.route.status,kind:state.route.kind??null,estimatedMinutes:state.route.estimatedMinutes??null,steps:state.route.steps,stages:state.route.stages?.map(stage=>({kind:stage.kind,title:stage.title,summary:stage.summary}))??[]};
     },
   });
 }
@@ -285,6 +325,7 @@ async function init() {
   search.addEventListener("keydown",event=>{ if(event.key==="Escape") searchResults.hidden=true; });
   originInput.addEventListener("input",()=>{
     state.origin=null; state.route=null; delete originInput.dataset.locationId; originError.hidden=true; $("#route-result").hidden=true;
+    routeJourney.hidden=true;
     if (state.view==="floor") renderFloor();
     renderOriginResults();
   });

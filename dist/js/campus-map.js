@@ -18,6 +18,11 @@ export async function createCampusMap(container,onBuildingSelect) {
   });
 
   let selectedId = null;
+  let hoveredId = null;
+  const centers=Object.fromEntries(buildingGeoJSON.features.filter(feature=>feature.properties.id!=="link").map(feature=>{
+    const points=feature.geometry.coordinates[0]; const center=points.reduce((sum,[lng,lat])=>[sum[0]+lng,sum[1]+lat],[0,0]).map(value=>value/points.length);
+    return [feature.properties.id,center];
+  }));
 
   map.on("load",() => {
     map.addSource("campus-buildings",{type:"geojson",data:buildingGeoJSON,promoteId:"id"});
@@ -28,22 +33,42 @@ export async function createCampusMap(container,onBuildingSelect) {
     map.addLayer({
       id:"campus-buildings",type:"fill-extrusion",source:"campus-buildings",
       paint:{
-        "fill-extrusion-color":["case",["boolean",["feature-state","selected"],false],"#20b486",["get","color"]],
-        "fill-extrusion-height":["get","height"],"fill-extrusion-base":0,"fill-extrusion-opacity":0.96,
+        "fill-extrusion-color":["case",
+          ["==",["get","id"],"link"],"#8fdcc8",
+          ["boolean",["feature-state","selected"],false],"#14c996",
+          ["boolean",["feature-state","hovered"],false],"#4e91f0",
+          "#7899bd"],
+        "fill-extrusion-height":["+",["get","height"],["case",["boolean",["feature-state","selected"],false],4,["boolean",["feature-state","hovered"],false],2,0]],
+        "fill-extrusion-base":0,
+        "fill-extrusion-opacity":.94,
       },
     });
     map.addLayer({
       id:"campus-outline",type:"line",source:"campus-buildings",
-      paint:{"line-color":"#ffffff","line-width":2,"line-opacity":0.9},
+      paint:{
+        "line-color":["case",["boolean",["feature-state","selected"],false],"#05775a",["boolean",["feature-state","hovered"],false],"#145db8","#ffffff"],
+        "line-width":["case",["boolean",["feature-state","selected"],false],5,["boolean",["feature-state","hovered"],false],3,1.5],
+        "line-opacity":1,
+      },
     });
     map.addLayer({
       id:"campus-labels",type:"symbol",source:"campus-buildings",
       filter:["!=",["get","id"],"link"],
       layout:{"text-field":["get","name"],"text-size":14,"text-font":["Noto Sans Regular"],"text-offset":[0,-1.1]},
-      paint:{"text-color":"#0b1d38","text-halo-color":"#ffffff","text-halo-width":2},
+      paint:{"text-color":["case",["boolean",["feature-state","selected"],false],"#05775a","#0b1d38"],"text-halo-color":"#ffffff","text-halo-width":2.5},
     });
-    map.on("mouseenter","campus-buildings",() => { map.getCanvas().style.cursor="pointer"; });
-    map.on("mouseleave","campus-buildings",() => { map.getCanvas().style.cursor=""; });
+    map.on("mousemove","campus-buildings",event => {
+      const id=event.features?.[0]?.properties?.id;
+      map.getCanvas().style.cursor=id&&id!=="link"?"pointer":"";
+      if (hoveredId && hoveredId!==id) map.setFeatureState({source:"campus-buildings",id:hoveredId},{hovered:false});
+      hoveredId=id&&id!=="link"?id:null;
+      if (hoveredId) map.setFeatureState({source:"campus-buildings",id:hoveredId},{hovered:true});
+    });
+    map.on("mouseleave","campus-buildings",() => {
+      map.getCanvas().style.cursor="";
+      if (hoveredId) map.setFeatureState({source:"campus-buildings",id:hoveredId},{hovered:false});
+      hoveredId=null;
+    });
     map.on("click","campus-buildings",event => {
       const feature = event.features?.[0];
       if (feature?.properties?.id && feature.properties.id !== "link") onBuildingSelect(feature.properties.id);
@@ -58,7 +83,10 @@ export async function createCampusMap(container,onBuildingSelect) {
       selectedId=id;
       if (!map.isStyleLoaded() || !map.getSource("campus-buildings")) return;
       if (previousId) map.setFeatureState({source:"campus-buildings",id:previousId},{selected:false});
-      if (id) map.setFeatureState({source:"campus-buildings",id},{selected:true});
+      if (id) {
+        map.setFeatureState({source:"campus-buildings",id},{selected:true});
+        if (centers[id]) map.easeTo({center:centers[id],zoom:18.35,pitch:59,duration:520});
+      }
     },
     resize() { map.resize(); },
     destroy() { map.remove(); },

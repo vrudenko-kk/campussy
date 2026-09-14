@@ -57,7 +57,18 @@ export const buildingGeoJSON = {
 export const buildings = [
   { id: "c1", name: "Корпус 1", short: "1", floors: [1,2,3,4,5], entrance: "Главный вход со стороны 4-го Вешняковского проезда" },
   { id: "c2", name: "Корпус 2", short: "2", floors: [1,2,3,4,5], entrance: "Вход через внутренний двор или переход" },
-  { id: "c3", name: "Корпус 3", short: "3", floors: [1,2,3,4,5,6,7,8,9], entrance: "Главный вход в центральной части комплекса" },
+  { id: "c3", name: "Корпус 3", short: "3", floors: [1,2,3,4,5,6,7,8,9], entrance: "Центральный вход в главной части комплекса" },
+];
+
+export const transitions = [
+  {
+    id:"c1-c3-cofix", name:"Переход через Coffee Fix", short:"Coffee Fix",
+    from:{buildingId:"c1",floor:2}, to:{buildingId:"c3",floor:2}, cost:7,
+  },
+  {
+    id:"c2-c3-bridge", name:"Переход между корпусами 2 и 3", short:"Межкорпусной переход",
+    from:{buildingId:"c2",floor:4}, to:{buildingId:"c3",floor:3}, cost:8,
+  },
 ];
 
 const explicit = [
@@ -87,7 +98,8 @@ const explicit = [
 ];
 
 const roomRanges = [
-  ["c2",1,2116,2132],["c2",2,2217,2230],["c2",3,2316,2332],["c2",4,2416,2431],["c2",5,2516,2533],
+  ["c1",2,1202,1217],["c1",3,1302,1317],["c1",4,1402,1417],["c1",5,1502,1517],
+  ["c2",1,2118,2133],["c2",2,2218,2233],["c2",3,2318,2333],["c2",4,2418,2433],["c2",5,2518,2533],
   ["c3",2,3202,3212],["c3",3,3302,3311],["c3",4,3402,3411],["c3",5,3502,3511],
   ["c3",6,3602,3611],["c3",7,3702,3711],["c3",8,3802,3811],["c3",9,3902,3911],
 ];
@@ -119,10 +131,12 @@ export const locations = [...explicit,...generatedRooms]
 
 export const sharedFacilities = [
   { id:"atm", name:"Банкоматы", type:"facility", floor:1, zone:"Общий блок 1–2 этажей", verified:false },
-  { id:"buffet", name:"Буфет", type:"food", floor:1, zone:"Общий блок 1–2 этажей", verified:false },
-  { id:"canteen", name:"Столовая", type:"food", floor:2, zone:"Общий блок 1–2 этажей", verified:false },
+  { id:"buffet", name:"Буфет у центрального входа", aliases:"буфет", type:"food", buildingId:"c3", floor:1, zone:"Корпус 3 · 1-й этаж", note:"На 1-м этаже от центрального входа", verified:true, mapLabel:"БФ" },
+  { id:"cofix", name:"Coffee Fix", aliases:"кофикс кофейня", type:"food", buildingId:"c1", floor:2, zone:"Переход корпусов 1 и 3", note:"У перехода из корпуса 1 в корпус 3", verified:true, mapLabel:"CF" },
+  { id:"canteen", name:"Столовая", type:"food", buildingId:"c3", floor:2, zone:"Корпус 3 · 2-й этаж", note:"От центрального входа поднимитесь на 2-й этаж", verified:true, mapLabel:"СТ" },
+  { id:"library", name:"Библиотека", aliases:"медиатека", type:"service", buildingId:"c2", floor:1, zone:"Корпус 2 · 1-й этаж", note:"1-й этаж корпуса 2", verified:true, mapLabel:"Б" },
   { id:"wardrobe", name:"Гардеробы", type:"facility", floor:1, zone:"Общий блок 1–2 этажей", verified:false },
-  { id:"gym", name:"Спортивный зал", type:"facility", floor:1, zone:"Общий блок 1–2 этажей", verified:false },
+  { id:"gym", name:"Спортивный зал", aliases:"спортзал", type:"facility", buildingId:"c1", floor:1, zone:"Корпус 1 · 1-й этаж", note:"1-й этаж корпуса 1", verified:true, mapLabel:"СП" },
   { id:"medical", name:"Медпункт", type:"service", floor:1, zone:"Общий блок 1–2 этажей", verified:false },
   { id:"restroom", name:"Санузлы", type:"restroom", floor:null, zone:"Расположение требует уточнения", verified:false },
 ];
@@ -130,5 +144,7 @@ export const sharedFacilities = [
 export const allSearchable = [...locations,...sharedFacilities];
 
 export function buildingById(id) { return buildings.find(building => building.id === id); }
-export function locationsOnFloor(buildingId,floor) { return locations.filter(location => location.buildingId === buildingId && location.floor === Number(floor)); }
+export function locationsOnFloor(buildingId,floor) {
+  return [...locations,...sharedFacilities].filter(location => location.buildingId === buildingId && location.floor === Number(floor));
+}
 export function locationById(id) { return allSearchable.find(location => location.id === id); }

@@ -37,7 +37,7 @@
             <p>Нажмите на здание на карте или выберите его в списке.</p>
           </div>
           <div id="campus-map" class="campus-map" aria-label="Трёхмерная карта корпусов"></div>
-          <div class="map-legend"><span><i></i> Данные зданий OpenStreetMap</span><span>3 корпуса · межкорпусной переход</span></div>
+          <div class="map-legend"><span><i></i> Выбранный корпус</span><span>3 корпуса · 2 внутренних перехода</span></div>
         </div>
         <aside class="campus-sidebar">
           <div id="building-chips" class="building-chips" aria-label="Корпуса"></div>
@@ -47,7 +47,9 @@
             <div class="facility-grid">
               <button type="button" data-facility="canteen"><span>☕</span>Столовая</button>
               <button type="button" data-facility="buffet"><span>🥪</span>Буфет</button>
-              <button type="button" data-facility="medical"><span>✚</span>Медпункт</button>
+              <button type="button" data-facility="cofix"><span>CF</span>Coffee Fix</button>
+              <button type="button" data-facility="library"><span>Б</span>Библиотека</button>
+              <button type="button" data-facility="gym"><span>СП</span>Спортзал</button>
               <button type="button" data-facility="restroom"><span>WC</span>Санузлы</button>
             </div>
           </section>
@@ -71,6 +73,10 @@
             <div class="data-note"><span>i</span><p>Точный план 5-го этажа корпуса 1 основан на предоставленных материалах. Остальные этажи показаны как пилотная схема по диапазонам аудиторий.</p></div>
           </section>
         </div>
+        <section class="route-journey" id="route-journey" hidden aria-labelledby="route-journey-title">
+          <div class="journey-heading"><div><p class="eyebrow">Весь путь</p><h2 id="route-journey-title">Маршрут по этажам</h2></div><span id="journey-meta"></span></div>
+          <div class="journey-cards" id="journey-cards"></div>
+        </section>
       </section>
     </main>
 
@@ -88,6 +94,7 @@
       <button type="button" class="button button-primary" id="route-build">Построить маршрут</button>
       <section class="route-result" id="route-result" hidden aria-live="polite">
         <h3 id="route-result-title"></h3>
+        <p class="route-result-meta" id="route-result-meta"></p>
         <ol id="route-steps"></ol>
       </section>
     </aside>
