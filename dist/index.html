@@ -3,177 +3,88 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Прототип навигационной карты пятого этажа корпуса 1." />
-    <meta name="theme-color" content="#0b1f3a" />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%230b1f3a' d='M6 8h52v48H6z'/%3E%3Cpath fill='%2324b3a8' d='M16 18h32v7H16zm0 14h20v7H16zm0 14h32v7H16z'/%3E%3Ccircle fill='white' cx='45' cy='35.5' r='5'/%3E%3C/svg%3E" />
-    <title>Навигация · корпус 1</title>
-    <style>
-      :root { --navy:#0b1f3a; --navy-2:#12355d; --teal:#17a69c; --sky:#eaf3fa; --ink:#162235; --muted:#607087; --line:#dce5ee; --paper:#fff; --route:#f05b50; }
-      * { box-sizing:border-box; }
-      body { margin:0; min-width:320px; color:var(--ink); background:#f2f6f9; font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-      button, select { font:inherit; }
-      .topbar { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:1rem clamp(1rem,3vw,3rem); color:#fff; background:var(--navy); }
-      .brand { display:flex; align-items:center; gap:.75rem; }
-      .brand-mark { width:2.15rem; height:2.15rem; display:grid; place-items:center; border-radius:.55rem; background:var(--teal); color:#fff; font-weight:800; }
-      .brand h1 { margin:0; font-size:1rem; line-height:1.2; font-weight:700; }
-      .brand p { margin:.18rem 0 0; color:#b9c9dc; font-size:.78rem; }
-      .status { padding:.42rem .72rem; border:1px solid rgba(255,255,255,.25); border-radius:999px; color:#d8f6f3; font-size:.82rem; white-space:nowrap; }
-      main { max-width:1500px; margin:0 auto; padding:clamp(1rem,2.6vw,2.1rem); }
-      .intro { margin:0 0 1.25rem; }
-      .intro h2 { margin:0; color:var(--navy); font-size:clamp(1.4rem,2.5vw,2rem); letter-spacing:-.035em; }
-      .intro p { max-width:62rem; margin:.55rem 0 0; color:var(--muted); line-height:1.55; }
-      .workspace { display:grid; grid-template-columns:minmax(260px,330px) minmax(0,1fr); gap:1.25rem; align-items:start; }
-      .panel, .map-panel { background:var(--paper); border:1px solid var(--line); border-radius:1rem; box-shadow:0 12px 30px rgba(15,35,63,.07); }
-      .panel { padding:1.25rem; }
-      .eyebrow { margin:0 0 .4rem; color:var(--teal); font-size:.76rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
-      .panel h3 { margin:0; color:var(--navy); font-size:1.23rem; letter-spacing:-.025em; }
-      .field { display:grid; gap:.43rem; margin-top:1rem; }
-      .field label { font-size:.86rem; font-weight:700; }
-      select { width:100%; min-height:2.85rem; padding:.55rem .75rem; border:1px solid #bfcddb; border-radius:.55rem; color:var(--ink); background:#fff; }
-      select:focus-visible, button:focus-visible { outline:3px solid rgba(23,166,156,.32); outline-offset:2px; }
-      .swap { display:flex; justify-content:center; margin:.15rem 0 -.2rem; }
-      .icon-button { width:2.45rem; height:2.45rem; border:1px solid var(--line); border-radius:50%; background:#fff; color:var(--navy); cursor:pointer; font-size:1.1rem; }
-      .primary { width:100%; min-height:3rem; margin-top:1.1rem; border:0; border-radius:.6rem; color:#fff; background:var(--teal); cursor:pointer; font-weight:750; }
-      .primary:hover { background:#11877f; }
-      .route-card { margin-top:1.2rem; padding:1rem; border-radius:.7rem; background:var(--sky); }
-      .route-card strong { display:block; color:var(--navy); font-size:.98rem; }
-      .route-card p { margin:.34rem 0 0; color:var(--muted); font-size:.86rem; line-height:1.45; }
-      .steps { margin:.82rem 0 0; padding:0; list-style:none; counter-reset:step; }
-      .steps li { position:relative; margin:.5rem 0; padding-left:1.85rem; color:#354257; font-size:.86rem; line-height:1.35; counter-increment:step; }
-      .steps li::before { content:counter(step); position:absolute; left:0; top:-.1rem; width:1.3rem; height:1.3rem; display:grid; place-items:center; border-radius:50%; color:#fff; background:var(--navy-2); font-size:.72rem; font-weight:800; }
-      .map-panel { overflow:hidden; }
-      .map-header { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; padding:1.1rem 1.2rem .85rem; border-bottom:1px solid var(--line); }
-      .map-header h3 { margin:0; color:var(--navy); font-size:1.13rem; }
-      .map-header p { margin:.3rem 0 0; color:var(--muted); font-size:.82rem; }
-      .legend { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:.6rem; color:#536176; font-size:.75rem; }
-      .legend span { display:inline-flex; align-items:center; gap:.28rem; white-space:nowrap; }
-      .dot { width:.72rem; height:.72rem; display:inline-block; border-radius:50%; background:var(--route); }
-      .dot.start { background:var(--teal); }
-      .map-stage { position:relative; width:100%; aspect-ratio:2000/1040; min-height:330px; background:#f8fafc; overflow:hidden; }
-      .map-base, .map-overlay { position:absolute; inset:0; width:100%; height:100%; }
-      .map-base { pointer-events:none; }
-      .map-overlay { overflow:visible; }
-      .route-path { fill:none; stroke:var(--route); stroke-width:16; stroke-linecap:round; stroke-linejoin:round; filter:drop-shadow(0 2px 2px rgba(240,91,80,.27)); }
-      .route-halo { fill:none; stroke:#fff; stroke-width:26; stroke-linecap:round; stroke-linejoin:round; opacity:.92; }
-      .marker-start { fill:var(--teal); stroke:#fff; stroke-width:8; }
-      .marker-end { fill:var(--route); stroke:#fff; stroke-width:8; }
-      .room-label { fill:#10213a; font-family:Inter,Arial,sans-serif; font-size:32px; font-weight:800; text-anchor:middle; paint-order:stroke; stroke:#f8fafc; stroke-width:10px; stroke-linejoin:round; }
-      .route-label { font-family:Inter,Arial,sans-serif; font-size:22px; font-weight:800; fill:#fff; text-anchor:middle; }
-      .map-footer { padding:.85rem 1.2rem 1rem; color:#66758a; font-size:.78rem; line-height:1.4; }
-      @media (max-width:850px) { .workspace { grid-template-columns:1fr; } .panel { order:2; } .map-panel { order:1; } }
-      @media (max-width:540px) { .topbar { align-items:flex-start; } .status { font-size:.72rem; } .map-header { display:block; } .legend { justify-content:flex-start; margin-top:.65rem; } .map-stage { min-height:250px; } .room-label { font-size:25px; } }
-    </style>
+    <meta name="description" content="Интерактивная навигация по кампусу Финансового университета на 4-м Вешняковском проезде." />
+    <meta name="theme-color" content="#071d38" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.9.0/dist/maplibre-gl.css" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23071d38'/%3E%3Cpath d='M13 45h38v5H13zm5-19h28v17H18zm-4-3 18-11 18 11v3H14z' fill='%2328b88b'/%3E%3Cpath d='M23 30v10m9-10v10m9-10v10' stroke='white' stroke-width='3'/%3E%3C/svg%3E" />
+    <title>Навигация по кампусу · Финансовый университет</title>
   </head>
   <body>
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand-mark" aria-hidden="true">Н</div>
-        <div><h1>Навигационная карта</h1><p>Корпус 1 · 4-й Вешняковский проезд, 4</p></div>
+    <header class="app-header">
+      <button class="brand" type="button" id="brand-home" aria-label="Вернуться к карте кампуса">
+        <span class="brand-mark" aria-hidden="true">Ф</span>
+        <span><strong>Финансовый университет</strong><small>Навигация по кампусу</small></span>
+      </button>
+      <div class="search-shell" role="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.4-4.4m2.4-5.1a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z"/></svg>
+        <label class="sr-only" for="global-search">Найти аудиторию или объект</label>
+        <input id="global-search" type="search" autocomplete="off" placeholder="Аудитория, столовая, медиатека…" />
+        <button type="button" id="search-clear" aria-label="Очистить поиск">×</button>
+        <div class="search-results" id="search-results" hidden></div>
       </div>
-      <span class="status">Пилот · 5-й этаж</span>
+      <span class="pilot-badge">Пилот</span>
     </header>
-    <main>
-      <section class="intro" aria-labelledby="page-title">
-        <h2 id="page-title">Постройте маршрут по этажу</h2>
-        <p>Выберите две аудитории — карта покажет путь по коридору и краткую последовательность действий.</p>
-      </section>
-      <section class="workspace" aria-label="Рабочая область навигации">
-        <aside class="panel" aria-labelledby="route-title">
-          <p class="eyebrow">Маршрут</p>
-          <h3 id="route-title">Откуда и куда</h3>
-          <div class="field"><label for="from">Откуда</label><select id="from"></select></div>
-          <div class="swap"><button class="icon-button" id="swap" type="button" aria-label="Поменять местами точки маршрута">⇅</button></div>
-          <div class="field"><label for="to">Куда</label><select id="to"></select></div>
-          <button class="primary" id="build" type="button">Построить маршрут</button>
-          <section class="route-card" aria-live="polite" aria-labelledby="route-result-title">
-            <strong id="route-result-title">Маршрут готов</strong>
-            <p id="route-summary">Выберите аудитории и постройте маршрут.</p>
-            <ol class="steps" id="steps"></ol>
+
+    <main class="app-main">
+      <section id="campus-view" class="campus-view" aria-labelledby="campus-title">
+        <div class="campus-map-shell">
+          <div class="map-copy">
+            <p class="eyebrow">4-й Вешняковский проезд, 4</p>
+            <h1 id="campus-title">Выберите корпус</h1>
+            <p>Нажмите на здание на карте или выберите его в списке.</p>
+          </div>
+          <div id="campus-map" class="campus-map" aria-label="Трёхмерная карта корпусов"></div>
+          <div class="map-legend"><span><i></i> Данные зданий OpenStreetMap</span><span>3 корпуса · межкорпусной переход</span></div>
+        </div>
+        <aside class="campus-sidebar">
+          <div id="building-chips" class="building-chips" aria-label="Корпуса"></div>
+          <section id="building-panel" class="building-panel" aria-live="polite"></section>
+          <section class="facility-panel" aria-labelledby="facility-title">
+            <div class="section-heading"><div><p class="eyebrow">Быстрый доступ</p><h2 id="facility-title">Объекты кампуса</h2></div></div>
+            <div class="facility-grid">
+              <button type="button" data-facility="canteen"><span>☕</span>Столовая</button>
+              <button type="button" data-facility="buffet"><span>🥪</span>Буфет</button>
+              <button type="button" data-facility="medical"><span>✚</span>Медпункт</button>
+              <button type="button" data-facility="restroom"><span>WC</span>Санузлы</button>
+            </div>
           </section>
         </aside>
-        <section class="map-panel" aria-labelledby="map-title">
-          <div class="map-header">
-            <div><h3 id="map-title">Карта 5-го этажа</h3><p>Выберите точки слева — маршрут появится на схеме.</p></div>
-            <div class="legend" aria-label="Условные обозначения"><span><i class="dot start"></i>старт</span><span><i class="dot"></i>финиш и маршрут</span></div>
-          </div>
-          <div class="map-stage" id="map-stage">
-            <object class="map-base" data="assets/floor-5-map.svg" type="image/svg+xml" aria-label="Схема пятого этажа"></object>
-            <svg class="map-overlay" viewBox="0 0 2000 1040" aria-hidden="true">
-              <g id="room-labels"></g>
-              <polyline id="route-halo" class="route-halo" points=""></polyline>
-              <polyline id="route-path" class="route-path" points=""></polyline>
-              <g id="route-markers"></g>
-            </svg>
-          </div>
-          <div class="map-footer">Карта создана для демонстрации навигации. Перед вводом в эксплуатацию требуется сверка контуров, проходов и доступности на месте.</div>
-        </section>
+      </section>
+
+      <section id="floor-view" class="floor-view" hidden aria-labelledby="floor-title">
+        <nav class="breadcrumbs" aria-label="Навигация по разделам">
+          <button type="button" id="back-to-campus">Кампус</button><span>›</span><span id="breadcrumb-current"></span>
+        </nav>
+        <div class="floor-layout">
+          <aside class="floor-sidebar">
+            <div class="floor-heading"><p class="eyebrow" id="floor-building-name"></p><h1 id="floor-title"></h1></div>
+            <div id="floor-buttons" class="floor-tabs" aria-label="Этажи"></div>
+            <div class="location-list-heading"><h2>Помещения</h2><span>Нажмите, чтобы построить маршрут</span></div>
+            <div id="floor-locations" class="location-list"></div>
+          </aside>
+          <section class="floor-canvas-card" aria-label="Схема этажа">
+            <div class="floor-toolbar"><div><strong>План этажа</strong><span>Схема адаптирована для навигации</span></div><div class="floor-legend"><span><i class="legend-origin"></i>Старт</span><span><i class="legend-route"></i>Маршрут</span></div></div>
+            <div class="floor-canvas"><svg id="floor-map" role="img"></svg></div>
+            <div class="data-note"><span>i</span><p>Точный план 5-го этажа корпуса 1 основан на предоставленных материалах. Остальные этажи показаны как пилотная схема по диапазонам аудиторий.</p></div>
+          </section>
+        </div>
       </section>
     </main>
-    <script>
-      const rooms = {
-        "1513": { name: "Аудитория 1513", point: [495, 405], door: [550, 555], label: [270, 365] },
-        "1512": { name: "Аудитория 1512", point: [495, 585], door: [550, 555], label: [270, 590] },
-        "1514": { name: "Аудитория 1514", point: [820, 440], door: [760, 555], label: [810, 415] },
-        "1515": { name: "Аудитория 1515", point: [1175, 440], door: [1030, 555], label: [1170, 415] },
-        "1502": { name: "Аудитория 1502", point: [1570, 440], door: [1465, 555], label: [1720, 400] },
-        "М": { name: "Помещение М", point: [605, 690], door: [500, 690], label: [600, 720] },
-        "1503": { name: "Аудитория 1503", point: [750, 690], door: [760, 555], label: [750, 720] },
-        "1504": { name: "Аудитория 1504", point: [1325, 690], door: [1280, 555], label: [1325, 720] }
-      };
-      const corridor = [[550,555],[760,555],[1030,555],[1280,555],[1465,555]];
-      const from = document.getElementById('from');
-      const to = document.getElementById('to');
-      const summary = document.getElementById('route-summary');
-      const steps = document.getElementById('steps');
-      const path = document.getElementById('route-path');
-      const halo = document.getElementById('route-halo');
-      const markers = document.getElementById('route-markers');
-      const labels = document.getElementById('room-labels');
 
-      function formatRoom(id) { return id === 'М' ? rooms[id].name : rooms[id].name; }
-      function populate() {
-        Object.keys(rooms).forEach((id) => {
-          [from, to].forEach((select) => { const option = document.createElement('option'); option.value = id; option.textContent = formatRoom(id); select.append(option); });
-          const text = document.createElementNS('http://www.w3.org/2000/svg','text');
-          text.setAttribute('x', rooms[id].label[0]); text.setAttribute('y', rooms[id].label[1]); text.setAttribute('class','room-label'); text.textContent = id; labels.append(text);
-        });
-        from.selectedIndex = [...from.options].findIndex((option) => option.value === '1512');
-        to.selectedIndex = [...to.options].findIndex((option) => option.value === '1502');
-      }
-      function nearestIndex(point) { return corridor.reduce((best, node, index) => Math.abs(node[0]-point[0]) < Math.abs(corridor[best][0]-point[0]) ? index : best, 0); }
-      function pointsFor(startId, endId) {
-        const start = rooms[startId]; const end = rooms[endId];
-        const startIndex = nearestIndex(start.door); const endIndex = nearestIndex(end.door);
-        const route = [start.point, start.door];
-        const direction = startIndex <= endIndex ? 1 : -1;
-        for (let i = startIndex; ; i += direction) { route.push(corridor[i]); if (i === endIndex) break; }
-        route.push(end.door, end.point);
-        return route;
-      }
-      function instructions(startId, endId) {
-        const a = rooms[startId]; const b = rooms[endId];
-        const direction = b.door[0] > a.door[0] ? 'вправо' : b.door[0] < a.door[0] ? 'влево' : 'прямо';
-        return [`Выйдите из ${formatRoom(startId)} в основной коридор.`, `Следуйте по коридору ${direction}.`, `Поверните к ${formatRoom(endId)}.`, `Вы на месте.`];
-      }
-      function renderRoute() {
-        const startId = from.value; const endId = to.value;
-        if (startId === endId) { summary.textContent = 'Выберите разные аудитории для построения маршрута.'; steps.innerHTML = ''; path.setAttribute('points',''); halo.setAttribute('points',''); markers.innerHTML = ''; return; }
-        const route = pointsFor(startId, endId); const value = route.map(([x,y]) => `${x},${y}`).join(' ');
-        path.setAttribute('points', value); halo.setAttribute('points', value);
-        markers.innerHTML = '';
-        [[route[0], 'marker-start', 'Старт'], [route[route.length - 1], 'marker-end', 'Финиш']].forEach(([point, className, label]) => {
-          const group = document.createElementNS('http://www.w3.org/2000/svg','g');
-          const circle = document.createElementNS('http://www.w3.org/2000/svg','circle'); circle.setAttribute('cx',point[0]); circle.setAttribute('cy',point[1]); circle.setAttribute('r','22'); circle.setAttribute('class',className);
-          const text = document.createElementNS('http://www.w3.org/2000/svg','text'); text.setAttribute('x',point[0]); text.setAttribute('y',point[1]+7); text.setAttribute('class','route-label'); text.textContent = label === 'Старт' ? 'A' : 'Б';
-          group.append(circle,text); markers.append(group);
-        });
-        summary.textContent = `${formatRoom(startId)} → ${formatRoom(endId)}. Маршрут проходит по основному коридору.`;
-        steps.innerHTML = instructions(startId, endId).map((item) => `<li>${item}</li>`).join('');
-      }
-      document.getElementById('build').addEventListener('click', renderRoute);
-      document.getElementById('swap').addEventListener('click', () => { const current = from.value; from.value = to.value; to.value = current; renderRoute(); });
-      [from, to].forEach((select) => select.addEventListener('change', renderRoute));
-      populate(); renderRoute();
-    </script>
+    <aside class="route-sheet" id="route-sheet" hidden aria-labelledby="route-sheet-title">
+      <div class="route-sheet-head"><div><p class="eyebrow">Маршрут</p><h2 id="route-sheet-title">Куда вы идёте</h2></div><button type="button" id="route-close" aria-label="Закрыть построение маршрута">×</button></div>
+      <div class="destination-card"><span class="pin">●</span><div><strong id="destination-name"></strong><small id="destination-meta"></small></div></div>
+      <div class="route-field"><label for="origin-select">Откуда нужно пройти</label><select id="origin-select"></select></div>
+      <button type="button" class="button button-primary" id="route-build">Построить маршрут</button>
+      <section class="route-result" id="route-result" hidden aria-live="polite">
+        <h3 id="route-result-title"></h3>
+        <ol id="route-steps"></ol>
+      </section>
+    </aside>
+
+    <script type="module" src="js/app.js"></script>
   </body>
 </html>
