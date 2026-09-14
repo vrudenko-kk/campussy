@@ -3,6 +3,7 @@ export const campus = {
   name: "Кампус на Вешняковском",
   address: "Москва, 4-й Вешняковский проезд, 4",
   center: [37.79561, 55.71812],
+  checkpoint: [37.79558, 55.71756],
   sources: {
     outdoor: "© OpenStreetMap contributors, ODbL",
     indoor: "fin-university-map.framer.website",
@@ -55,9 +56,9 @@ export const buildingGeoJSON = {
 };
 
 export const buildings = [
-  { id: "c1", name: "Корпус 1", short: "1", floors: [1,2,3,4,5], entrance: "Главный вход со стороны 4-го Вешняковского проезда" },
-  { id: "c2", name: "Корпус 2", short: "2", floors: [1,2,3,4,5], entrance: "Вход через внутренний двор или переход" },
-  { id: "c3", name: "Корпус 3", short: "3", floors: [1,2,3,4,5,6,7,8,9], entrance: "Центральный вход в главной части комплекса" },
+  { id: "c1", name: "Корпус 1", short: "1", floors: [1,2,3,4,5], defaultFloor:1, entrance: "Главный вход со стороны 4-го Вешняковского проезда" },
+  { id: "c2", name: "Корпус 2", short: "2", floors: [1,2,3,4,5], defaultFloor:1, entrance: "Вход через внутренний двор или переход" },
+  { id: "c3", name: "Корпус 3", short: "3", floors: [1,2,3,4,5,6,7,8,9], defaultFloor:3, entrance: "Центральный вход в главной части комплекса" },
 ];
 
 export const transitions = [
@@ -130,6 +131,7 @@ export const locations = [...explicit,...generatedRooms]
   }));
 
 export const sharedFacilities = [
+  { id:"checkpoint", name:"КПП · Проходная", aliases:"кпп проходная контроль пропускной пункт", type:"checkpoint", buildingId:"c3", floor:1, zone:"У 4-го Вешняковского проезда", note:"Небольшое здание проходной рядом с въездом в кампус", verified:true, mapLabel:"КПП" },
   { id:"atm", name:"Банкоматы", type:"facility", floor:1, zone:"Общий блок 1–2 этажей", verified:false },
   { id:"buffet", name:"Буфет у центрального входа", aliases:"буфет", type:"food", buildingId:"c3", floor:1, zone:"Корпус 3 · 1-й этаж", note:"На 1-м этаже от центрального входа", verified:true, mapLabel:"БФ" },
   { id:"cofix", name:"Coffee Fix", aliases:"кофикс кофейня", type:"food", buildingId:"c1", floor:2, zone:"Переход корпусов 1 и 3", note:"У перехода из корпуса 1 в корпус 3", verified:true, mapLabel:"CF" },

@@ -32,7 +32,19 @@ function addMarker(group,point,label,className) {
   group.append(circle,text);
 }
 
-export function renderFloorMap(svg,{buildingId,floor,route,destinationId,originId}) {
+function makeRoomInteractive(group,location,onLocationClick) {
+  if (!onLocationClick) return;
+  group.classList.add("floor-room-hotspot");
+  group.setAttribute("role","button");
+  group.setAttribute("tabindex","0");
+  group.setAttribute("aria-label",`${location.name}. Открыть действия.`);
+  group.addEventListener("click",()=>onLocationClick(location));
+  group.addEventListener("keydown",event=>{
+    if (event.key==="Enter" || event.key===" ") { event.preventDefault(); onLocationClick(location); }
+  });
+}
+
+export function renderFloorMap(svg,{buildingId,floor,route,destinationId,originId,onLocationClick}) {
   svg.replaceChildren();
   svg.setAttribute("viewBox","0 0 2000 900");
   const title=svgNode("title"); title.textContent=`Карта ${floor}-го этажа`;
@@ -46,8 +58,10 @@ export function renderFloorMap(svg,{buildingId,floor,route,destinationId,originI
     image.setAttribute("opacity","0.96"); svg.append(image);
     shown=shown.filter(location=>location.point);
     shown.forEach(location=>{
+      const group=svgNode("g");
+      const target=svgNode("rect",{x:location.label[0]-78,y:location.label[1]-112,width:156,height:92,rx:16,class:`floor-room-target${location.id===destinationId?" is-destination":""}${location.id===originId?" is-origin":""}`});
       const label=svgNode("text",{x:location.label[0],y:location.label[1]-62,class:"floor-room-label"});
-      label.textContent=location.id; svg.append(label);
+      label.textContent=location.id; group.append(target,label); makeRoomInteractive(group,location,onLocationClick); svg.append(group);
     });
   } else {
     const corridor=svgNode("rect",{x:165,y:470,width:1670,height:100,rx:18,class:"floor-corridor"}); svg.append(corridor);
@@ -59,9 +73,10 @@ export function renderFloorMap(svg,{buildingId,floor,route,destinationId,originI
     shown.forEach((location,index)=>{
       const p=positionGeneric(location,index,buildingId);
       location.point=[p.label[0],p.label[1]]; location.door=p.door;
+      const group=svgNode("g");
       const room=svgNode("rect",{x:p.x,y:p.y,width:p.width,height:p.height,rx:8,class:`floor-room${location.id===destinationId?" is-destination":""}${location.id===originId?" is-origin":""}`});
       const label=svgNode("text",{x:p.label[0],y:p.label[1],class:"floor-room-label"}); label.textContent=location.mapLabel??location.id;
-      svg.append(room,label);
+      group.append(room,label); makeRoomInteractive(group,location,onLocationClick); svg.append(group);
     });
   }
 

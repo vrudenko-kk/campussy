@@ -1,14 +1,21 @@
 import { buildingGeoJSON, campus } from "./campus-data.js";
 
-export async function createCampusMap(container,onBuildingSelect) {
+const buildingViews = {
+  c1:{bearing:82,zoom:18.45,pitch:58},
+  c2:{bearing:-98,zoom:18.45,pitch:58},
+  c3:{bearing:180,zoom:18.35,pitch:58},
+};
+
+export async function createCampusMap(container,onBuildingSelect,onCheckpointSelect) {
   const maplibregl = await import("https://cdn.jsdelivr.net/npm/maplibre-gl@6.9.0/dist/maplibre-gl.mjs");
+  const mobile=window.matchMedia("(max-width: 760px)").matches;
   const map = new maplibregl.Map({
     container,
     style:"https://tiles.openfreemap.org/styles/bright",
-    center:campus.center,
-    zoom:18.15,
-    pitch:57,
-    bearing:-22,
+    center:[37.79559,55.71791],
+    zoom:mobile?17.9:18.18,
+    pitch:58,
+    bearing:180,
     attributionControl:false,
   });
   map.addControl(new maplibregl.NavigationControl({showCompass:true,showZoom:true}),"top-left");
@@ -17,7 +24,7 @@ export async function createCampusMap(container,onBuildingSelect) {
     if (!map.hasImage(event.id)) map.addImage(event.id,{width:1,height:1,data:new Uint8Array([0,0,0,0])});
   });
 
-  let selectedId = null;
+  let selectedId = "c3";
   let hoveredId = null;
   const centers=Object.fromEntries(buildingGeoJSON.features.filter(feature=>feature.properties.id!=="link").map(feature=>{
     const points=feature.geometry.coordinates[0]; const center=points.reduce((sum,[lng,lat])=>[sum[0]+lng,sum[1]+lat],[0,0]).map(value=>value/points.length);
@@ -76,6 +83,12 @@ export async function createCampusMap(container,onBuildingSelect) {
     if (selectedId) map.setFeatureState({source:"campus-buildings",id:selectedId},{selected:true});
   });
 
+  const checkpoint=document.createElement("button");
+  checkpoint.type="button"; checkpoint.className="checkpoint-marker"; checkpoint.setAttribute("aria-label","КПП · открыть карточку");
+  checkpoint.innerHTML='<span aria-hidden="true">КПП</span><small>Проходная</small>';
+  checkpoint.addEventListener("click",event=>{ event.stopPropagation(); onCheckpointSelect?.(); });
+  new maplibregl.Marker({element:checkpoint,anchor:"bottom"}).setLngLat(campus.checkpoint).addTo(map);
+
   return {
     map,
     select(id) {
@@ -85,8 +98,16 @@ export async function createCampusMap(container,onBuildingSelect) {
       if (previousId) map.setFeatureState({source:"campus-buildings",id:previousId},{selected:false});
       if (id) {
         map.setFeatureState({source:"campus-buildings",id},{selected:true});
-        if (centers[id]) map.easeTo({center:centers[id],zoom:18.35,pitch:59,duration:520});
+        if (centers[id]) map.easeTo({center:centers[id],...buildingViews[id],duration:520});
       }
+    },
+    overview() {
+      const previousId=selectedId; selectedId="c3";
+      if (map.isStyleLoaded() && map.getSource("campus-buildings")) {
+        if (previousId) map.setFeatureState({source:"campus-buildings",id:previousId},{selected:false});
+        map.setFeatureState({source:"campus-buildings",id:"c3"},{selected:true});
+      }
+      map.easeTo({center:[37.79559,55.71791],zoom:mobile?17.9:18.18,pitch:58,bearing:180,duration:520});
     },
     resize() { map.resize(); },
     destroy() { map.remove(); },

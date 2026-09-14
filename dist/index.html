@@ -33,64 +33,68 @@
         <div class="campus-map-shell">
           <div class="map-copy">
             <p class="eyebrow">4-й Вешняковский проезд, 4</p>
-            <h1 id="campus-title">Выберите корпус</h1>
-            <p>Нажмите на здание на карте или выберите его в списке.</p>
+            <h1 id="campus-title">Карта кампуса</h1>
+            <p>Нажмите на корпус, чтобы открыть его этажи.</p>
           </div>
           <div id="campus-map" class="campus-map" aria-label="Трёхмерная карта корпусов"></div>
-          <div class="map-legend"><span><i></i> Выбранный корпус</span><span>3 корпуса · 2 внутренних перехода</span></div>
+          <div class="map-legend"><span><i></i> <span id="map-orientation-label">Вид на корпус 3 · направление на юг</span></span></div>
         </div>
-        <aside class="campus-sidebar">
-          <div id="building-chips" class="building-chips" aria-label="Корпуса"></div>
-          <section id="building-panel" class="building-panel" aria-live="polite"></section>
-          <section class="facility-panel" aria-labelledby="facility-title">
-            <div class="section-heading"><div><p class="eyebrow">Быстрый доступ</p><h2 id="facility-title">Объекты кампуса</h2></div></div>
-            <div class="facility-grid">
-              <button type="button" data-facility="canteen"><span>☕</span>Столовая</button>
-              <button type="button" data-facility="buffet"><span>🥪</span>Буфет</button>
-              <button type="button" data-facility="cofix"><span>CF</span>Coffee Fix</button>
-              <button type="button" data-facility="library"><span>Б</span>Библиотека</button>
-              <button type="button" data-facility="gym"><span>СП</span>Спортзал</button>
-              <button type="button" data-facility="restroom"><span>WC</span>Санузлы</button>
-            </div>
-          </section>
-        </aside>
       </section>
 
       <section id="floor-view" class="floor-view" hidden aria-labelledby="floor-title">
-        <nav class="breadcrumbs" aria-label="Навигация по разделам">
-          <button type="button" id="back-to-campus">Кампус</button><span>›</span><span id="breadcrumb-current"></span>
+        <nav class="floor-topbar" aria-label="Навигация по корпусу">
+          <button type="button" id="back-to-campus" aria-label="Вернуться к глобальной карте">← <span>Назад</span></button>
+          <div><strong id="floor-building-name"></strong><span id="floor-title"></span></div>
         </nav>
         <section class="route-journey" id="route-journey" hidden tabindex="-1" aria-labelledby="route-journey-title">
-          <div class="journey-heading">
-            <div><p class="eyebrow">Маршрут готов</p><h2 id="route-journey-title">Весь путь по шагам</h2></div>
-            <div class="journey-heading-actions"><span id="journey-meta"></span><button type="button" id="route-edit">Изменить маршрут</button></div>
+          <div class="route-navigation-head">
+            <div><p class="eyebrow">Навигация</p><h2 id="route-journey-title">Маршрут</h2></div>
+            <button type="button" id="route-edit">Изменить</button>
           </div>
-          <div class="journey-endpoints" aria-label="Начальная и конечная точки маршрута">
-            <div class="journey-endpoint is-origin"><span class="endpoint-marker">A</span><span><small>Откуда</small><strong id="journey-origin-name"></strong><em id="journey-origin-meta"></em></span></div>
-            <span class="endpoint-arrow" aria-hidden="true">→</span>
-            <div class="journey-endpoint is-destination"><span class="endpoint-marker">Б</span><span><small>Куда</small><strong id="journey-destination-name"></strong><em id="journey-destination-meta"></em></span></div>
+          <div class="current-step-card">
+            <span class="current-step-icon" id="current-step-icon" aria-hidden="true">↑</span>
+            <div><small id="current-step-index"></small><strong id="current-step-title"></strong><p id="current-step-detail"></p></div>
           </div>
-          <div class="journey-cards" id="journey-cards"></div>
-          <div class="journey-instructions">
-            <h3>Как пройти</h3>
-            <ol id="journey-steps"></ol>
+          <div class="current-stage-visual" id="current-stage-visual"></div>
+          <div class="route-step-controls">
+            <button type="button" id="route-prev">← Назад</button>
+            <span id="journey-meta"></span>
+            <button type="button" id="route-next">Далее →</button>
           </div>
+          <details class="route-details" id="route-details">
+            <summary><span id="route-details-label">Показать весь маршрут</span><i aria-hidden="true">⌄</i></summary>
+            <div class="journey-endpoints" aria-label="Начальная и конечная точки маршрута">
+              <div class="journey-endpoint is-origin"><span class="endpoint-marker">A</span><span><small>Откуда</small><strong id="journey-origin-name"></strong><em id="journey-origin-meta"></em></span></div>
+              <span class="endpoint-arrow" aria-hidden="true">→</span>
+              <div class="journey-endpoint is-destination"><span class="endpoint-marker">Б</span><span><small>Куда</small><strong id="journey-destination-name"></strong><em id="journey-destination-meta"></em></span></div>
+            </div>
+            <div class="journey-cards" id="journey-cards"></div>
+            <div class="journey-instructions"><h3>Подробно по шагам</h3><ol id="journey-steps"></ol></div>
+          </details>
         </section>
         <div class="floor-layout">
-          <aside class="floor-sidebar">
-            <div class="floor-heading"><p class="eyebrow" id="floor-building-name"></p><h1 id="floor-title"></h1></div>
-            <div id="floor-buttons" class="floor-tabs" aria-label="Этажи"></div>
-            <div class="location-list-heading"><h2>Помещения</h2><span>Нажмите, чтобы построить маршрут</span></div>
-            <div id="floor-locations" class="location-list"></div>
-          </aside>
           <section class="floor-canvas-card" aria-label="Схема этажа">
-            <div class="floor-toolbar"><div><strong>План этажа</strong><span>Схема адаптирована для навигации</span></div><div class="floor-legend"><span><i class="legend-origin"></i>Старт</span><span><i class="legend-route"></i>Маршрут</span></div></div>
-            <div class="floor-canvas"><svg id="floor-map" role="img"></svg></div>
-            <div class="data-note"><span>i</span><p>Точный план 5-го этажа корпуса 1 основан на предоставленных материалах. Остальные этажи показаны как пилотная схема по диапазонам аудиторий.</p></div>
+            <div class="floor-toolbar"><div><strong>План этажа</strong><span>Нажмите на аудиторию для действий</span></div><div class="floor-legend"><span><i class="legend-origin"></i>Старт</span><span><i class="legend-route"></i>Маршрут</span></div></div>
+            <div class="floor-map-wrap">
+              <div id="floor-buttons" class="floor-tabs" aria-label="Этажи"></div>
+              <div class="floor-canvas"><svg id="floor-map" role="img"></svg></div>
+            </div>
+            <div class="data-note"><span>i</span><p>План 5-го этажа корпуса 1 оцифрован по материалам проекта. Остальные этажи пока показаны схематично.</p></div>
           </section>
         </div>
       </section>
     </main>
+
+    <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
+
+    <aside class="location-sheet" id="location-sheet" hidden role="dialog" aria-modal="true" aria-labelledby="location-sheet-title">
+      <div class="location-sheet-head"><div><p class="eyebrow">Помещение</p><h2 id="location-sheet-title"></h2><span id="location-sheet-meta"></span></div><button type="button" id="location-close" aria-label="Закрыть карточку">×</button></div>
+      <p id="location-sheet-note" class="location-sheet-note"></p>
+      <div class="location-actions">
+        <button type="button" class="button button-primary" id="route-from-location">Маршрут отсюда</button>
+        <button type="button" class="button button-secondary" id="route-to-location">Маршрут сюда</button>
+      </div>
+    </aside>
 
     <aside class="route-sheet" id="route-sheet" hidden aria-labelledby="route-sheet-title">
       <div class="route-sheet-head"><div><p class="eyebrow">Маршрут</p><h2 id="route-sheet-title">Куда вы идёте</h2></div><button type="button" id="route-close" aria-label="Закрыть построение маршрута">×</button></div>
