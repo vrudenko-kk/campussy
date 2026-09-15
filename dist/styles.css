@@ -51,9 +51,6 @@ button:disabled { cursor:not-allowed; opacity:.48; }
 .map-legend { position:absolute; z-index:5; top:.75rem; left:.75rem; display:flex; padding:.48rem .62rem; border-radius:10px; color:#344760; background:rgba(255,255,255,.92); box-shadow:0 8px 20px rgba(20,47,79,.1); font-size:.7rem; backdrop-filter:blur(10px); }
 .map-legend span { display:inline-flex; align-items:center; gap:.36rem; }.map-legend i { width:9px; height:9px; border-radius:3px; background:var(--green); box-shadow:0 0 0 3px rgba(24,170,125,.15); }
 .maplibregl-ctrl-top-left { top:52px; left:8px; }.maplibregl-ctrl-group { overflow:hidden; border:1px solid #d8e2ec; border-radius:11px!important; box-shadow:0 8px 22px rgba(20,47,79,.14)!important; }
-.checkpoint-marker { display:grid; place-items:center; min-width:58px; padding:.38rem .48rem; border:2px solid #fff; border-radius:11px; color:#fff; background:var(--navy); box-shadow:0 7px 18px rgba(3,25,50,.28); cursor:pointer; }
-.checkpoint-marker span,.checkpoint-marker small { display:block; }.checkpoint-marker span { font-size:.72rem; font-weight:950; }.checkpoint-marker small { margin-top:.05rem; color:#cae0f5; font-size:.57rem; }
-.checkpoint-marker:hover { background:var(--green); }
 .map-fallback { display:grid; place-items:center; padding:5rem 1rem; background:linear-gradient(150deg,#d9e9f4,#edf4f8); }
 .fallback-campus { width:100%; display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; }
 .fallback-campus button { min-height:120px; display:grid; place-items:center; border:3px solid #fff; border-radius:14px; color:#fff; background:linear-gradient(150deg,#2e82e6,#1357b1); box-shadow:8px 10px 0 #0e335d; cursor:pointer; }

@@ -1,24 +1,44 @@
-import { buildingById, buildings, transitions } from "./campus-data.js";
+import { buildingById, buildings, floorGeometryFor, transitions } from "./campus-data.js";
 
-const detailedCorridor = [[550,555],[760,555],[1030,555],[1280,555],[1470,545]];
+const detailedCorridor = [[550,555],[760,555],[1030,555],[1280,555],[1470,545],[1740,545]];
+const genericCorridor = Array.from({length:18},(_,index)=>[220+index*92,520]);
 const nodeKey = (buildingId,floor) => `${buildingId}:${floor}`;
 const nodeFromKey = key => { const [buildingId,floor]=key.split(":"); return {buildingId,floor:Number(floor)}; };
 const accessOf = location => location.routeAccess??{buildingId:location.buildingId,floor:location.floor};
 
-function nearestIndex(point,nodes=detailedCorridor) {
+function densify(nodes,maxStep=75) {
+  const result=[nodes[0]];
+  for (let index=1;index<nodes.length;index+=1) {
+    const from=nodes[index-1]; const to=nodes[index];
+    const distance=Math.hypot(to[0]-from[0],to[1]-from[1]);
+    const parts=Math.max(1,Math.ceil(distance/maxStep));
+    for (let part=1;part<=parts;part+=1) result.push([
+      from[0]+(to[0]-from[0])*(part/parts),
+      from[1]+(to[1]-from[1])*(part/parts),
+    ]);
+  }
+  return result;
+}
+
+function corridorFor(location) {
+  return densify(location.buildingId==="c1" && Number(location.floor)===5?detailedCorridor:genericCorridor);
+}
+
+function nearestIndex(point,nodes) {
   return nodes.reduce((best,node,index) => Math.abs(node[0]-point[0]) < Math.abs(nodes[best][0]-point[0]) ? index : best,0);
 }
 
 function sameFloorPoints(origin,destination) {
-  if (!origin.point || !origin.door || !destination.point || !destination.door) return null;
-  const fromIndex=nearestIndex(origin.door); const toIndex=nearestIndex(destination.door);
-  const direction=fromIndex<=toIndex?1:-1; const points=[origin.point,origin.door];
-  for (let index=fromIndex;;index+=direction) { points.push(detailedCorridor[index]); if (index===toIndex) break; }
-  points.push(destination.door,destination.point); return points;
+  const from=floorGeometryFor(origin); const to=floorGeometryFor(destination); const corridor=corridorFor(origin);
+  const fromIndex=nearestIndex(from.door,corridor); const toIndex=nearestIndex(to.door,corridor);
+  const direction=fromIndex<=toIndex?1:-1; const points=[from.point,from.door];
+  for (let index=fromIndex;;index+=direction) { points.push(corridor[index]); if (index===toIndex) break; }
+  points.push(to.door,to.point); return points;
 }
 
 function sameFloorInstructions(origin,destination) {
-  const direction=destination.door?.[0]>origin.door?.[0]?"направо":destination.door?.[0]<origin.door?.[0]?"налево":"прямо";
+  const originDoor=floorGeometryFor(origin).door; const destinationDoor=floorGeometryFor(destination).door;
+  const direction=destinationDoor[0]>originDoor[0]?"направо":destinationDoor[0]<originDoor[0]?"налево":"прямо";
   return [`Выйдите из точки «${origin.name}» в основной коридор.`,`Двигайтесь по коридору ${direction}.`,`Следуйте до указателя «${destination.name}».`];
 }
 
@@ -98,14 +118,12 @@ function transitionText(edge) {
 }
 
 function floorStagePoints(location,role) {
-  if (location.point && location.door) {
-    return role==="start"
-      ? [location.point,location.door,[1030,555],[1470,545],[1740,545]]
-      : [[1740,545],[1470,545],[1030,555],location.door,location.point];
-  }
+  const geometry=floorGeometryFor(location); const corridor=corridorFor(location);
+  const doorIndex=nearestIndex(geometry.door,corridor);
+  const toExit=corridor.slice(doorIndex);
   return role==="start"
-    ? [[350,690],[350,520],[980,520],[1740,520]]
-    : [[1740,520],[980,520],[1500,520],[1500,690]];
+    ? [geometry.point,geometry.door,...toExit]
+    : [...toExit].reverse().concat([geometry.door,geometry.point]);
 }
 
 function outdoorStage(location,role) {

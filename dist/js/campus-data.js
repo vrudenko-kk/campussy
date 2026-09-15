@@ -158,3 +158,29 @@ export function locationsOnFloor(buildingId,floor) {
   return [...locations,...sharedFacilities].filter(location => location.buildingId === buildingId && location.floor === Number(floor));
 }
 export function locationById(id) { return allSearchable.find(location => location.id === id); }
+
+export function floorGeometryFor(location,fallbackIndex=0) {
+  if (location.point && location.door) {
+    return {
+      point:[...location.point],door:[...location.door],label:[...(location.label??location.point)],
+      x:null,y:null,width:null,height:null,custom:true,
+    };
+  }
+
+  const suffix=Number.parseInt(location.id,10)%100;
+  let slot=null;
+  if (location.buildingId==="c1" && suffix>=2 && suffix<=17) slot=suffix-2;
+  if (location.buildingId==="c2" && suffix>=18 && suffix<=33) slot=suffix-18;
+  if (location.buildingId==="c3" && suffix>=2 && suffix<=17) slot=suffix-2;
+  const canonical=slot??fallbackIndex;
+  const columns=8;
+  const row=Math.floor(canonical/columns)%2;
+  const localBase=canonical%columns;
+  const local=location.buildingId==="c2"?columns-1-localBase:localBase;
+  const usable=1550;
+  const width=usable/columns;
+  const x=225+local*width;
+  const y=row===0?240:610;
+  const label=[x+(width-10)/2,y+120];
+  return {x,y,width:width-10,height:230,door:[x+width/2,row===0?470:570],label,point:[...label],custom:false};
+}
