@@ -1,6 +1,6 @@
-import { surveyedPlans, entryPlan, genericPlan } from "./floor-plans.js?v=a56ba11e977f";
-import { wingPlans } from "./wing-plans.js?v=a56ba11e977f";
-import { wingDirectory, directoryById } from "./wing-directory.js?v=a56ba11e977f";
+import { surveyedPlans, entryPlan, genericPlan } from "./floor-plans.js?v=90926fb31109";
+import { wingPlans } from "./wing-plans.js?v=90926fb31109";
+import { wingDirectory, directoryById } from "./wing-directory.js?v=90926fb31109";
 
 export const campus = {
   id: "veshnyakovsky-4",
@@ -79,15 +79,15 @@ export const floorAreas=[...buildings,entranceBlock];
 export const transitions = [
   {
     id:"c1-c3-cofix", name:"Переход через Coffix", short:"Coffix",
-    from:{buildingId:"c1",floor:2}, to:{buildingId:"c3",floor:2}, cost:7,
+    from:{buildingId:"c1",floor:2}, to:{buildingId:"c3",floor:2}, distanceMeters:7,
   },
   {
     id:"c2-c3-bridge", name:"Переход между корпусами 2 и 3", short:"Межкорпусной переход",
-    from:{buildingId:"c2",floor:4}, to:{buildingId:"c3",floor:3}, cost:8,
+    from:{buildingId:"c2",floor:4}, to:{buildingId:"c3",floor:3}, distanceMeters:8,
   },
   {
     id:"c1-c3-upper",name:"Переход в корпус 1",short:"Межкорпусной переход",
-    from:{buildingId:"c1",floor:5},to:{buildingId:"c3",floor:4},cost:8,
+    from:{buildingId:"c1",floor:5},to:{buildingId:"c3",floor:4},distanceMeters:8,
   },
 ];
 

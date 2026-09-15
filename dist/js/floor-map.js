@@ -1,5 +1,5 @@
-import { getFloorPlan, locationById, buildingById, buildingGeoJSON } from "./campus-data.js?v=a56ba11e977f";
-import { campusOutdoor,metroPoint,roadCoordinates,streetGate } from "./outdoor-data.js?v=a56ba11e977f";
+import { getFloorPlan, locationById, buildingById, buildingGeoJSON } from "./campus-data.js?v=90926fb31109";
+import { campusOutdoor,metroPoint,roadCoordinates,streetGate } from "./outdoor-data.js?v=90926fb31109";
 
 const NS="http://www.w3.org/2000/svg";
 const svgNode=(tag,attributes={})=>{

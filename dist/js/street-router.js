@@ -1,6 +1,7 @@
-import { buildRoute } from "./router.js?v=a56ba11e977f";
-import { locationById } from "./campus-data.js?v=a56ba11e977f";
-import { metroPoint,streetGate,campusOutdoor } from "./outdoor-data.js?v=a56ba11e977f";
+import { buildRoute } from "./router.js?v=90926fb31109";
+import { locationById } from "./campus-data.js?v=90926fb31109";
+import { metroPoint,streetGate,campusOutdoor } from "./outdoor-data.js?v=90926fb31109";
+import { evaluateEdge } from "./routing-model.js?v=90926fb31109";
 
 const cache=new Map();
 export function decodePolyline(encoded){
@@ -36,7 +37,9 @@ export async function buildRouteWithStreet(origin,destination,options={}){
     const street={kind:"street",buildingId:"entry",floor:1,title:"Метро ↔ кампус",summary:fromMetro?"От метро к КПП":"От КПП к метро",detail:`Пешком · ${walking.meters} м. ${walking.instructions.join(" ")}`,geoPoints:walking.coordinates,points:[],fromLabel:fromMetro?"Метро":"КПП",toLabel:fromMetro?"КПП":"Метро",source:"Пешеходный маршрут · Valhalla / OpenStreetMap",meters:walking.meters};
     const gate={kind:"outdoor",buildingId:"entry",floor:1,title:"КПП · выход к проезду",summary:fromMetro?"Войдите на территорию через КПП":"Выйдите через КПП к проезду",detail:"КПП выходит непосредственно к 4-му Вешняковскому проезду.",points:fromMetro?[campusOutdoor.streetGate,[140,95],campusOutdoor.checkpoint]:[campusOutdoor.checkpoint,[140,95],campusOutdoor.streetGate],fromLabel:fromMetro?"Проезд":"КПП",toLabel:fromMetro?"КПП":"Проезд"};
     const stages=fromMetro?[street,gate,...inside.stages]:[...inside.stages,gate,street];
-    return {status:"ready",kind:"outdoor",stages,points:null,estimatedMinutes:Math.max(1,Math.ceil(walking.seconds/60)+(inside.estimatedMinutes??0)),steps:stages.map(s=>s.summary+". "+s.detail)};
+    const gateSeconds=evaluateEdge({id:"gate"},{id:"checkpoint"},{kind:"outdoor",points:gate.points}).seconds;
+    const estimatedSeconds=walking.seconds+gateSeconds+(inside.estimatedSeconds??0);
+    return {status:"ready",kind:"outdoor",stages,points:null,estimatedSeconds,timingBasis:"mixed",estimatedMinutes:Math.max(1,Math.ceil(estimatedSeconds/60)),steps:stages.map(s=>s.summary+". "+s.detail)};
   }catch(error){
     if(options.signal?.aborted)throw error;
     return {status:"street-unavailable",stages:[],steps:["Не удалось получить пешеходный маршрут к метро. Проверьте интернет и нажмите «Построить маршрут» ещё раз."]};

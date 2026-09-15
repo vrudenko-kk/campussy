@@ -1,8 +1,8 @@
-import { allSearchable, buildingById, getFloorPlan, locationById } from "./campus-data.js?v=a56ba11e977f";
-import { createCampusMap } from "./campus-map.js?v=a56ba11e977f";
-import { renderFloorMap } from "./floor-map.js?v=a56ba11e977f";
-import { buildRouteWithStreet } from "./street-router.js?v=a56ba11e977f";
-import { wingDirectory } from "./wing-directory.js?v=a56ba11e977f";
+import { allSearchable, buildingById, getFloorPlan, locationById } from "./campus-data.js?v=90926fb31109";
+import { createCampusMap } from "./campus-map.js?v=90926fb31109";
+import { renderFloorMap } from "./floor-map.js?v=90926fb31109";
+import { buildRouteWithStreet } from "./street-router.js?v=90926fb31109";
+import { wingDirectory } from "./wing-directory.js?v=90926fb31109";
 
 const SEARCH_PLACEHOLDER="Аудитория, столовая, КПП…";
 const RECENT_KEY="campussy-recent-searches";
@@ -373,7 +373,7 @@ function renderCurrentStage() {
   const stageIcon=current=>current.kind==="vertical"?(current.toFloor>current.fromFloor?"↑":"↓"):current.kind==="transition"?"⇄":current.kind==="outdoor"?"⌖":"→";
   $("#current-step-icon").textContent=stageIcon(stage);
   $("#route-progress").max=stages.length; $("#route-progress").value=state.activeStage+1;
-  $("#route-source-note").textContent=$("#plan-source").textContent;
+  $("#route-source-note").textContent="Время приблизительное: учтены замеры прохода к лестнице, подъёма и ожидания лифта; остальные участки оценочные. "+$("#plan-source").textContent;
   $("#route-prev").disabled=state.activeStage===0; $("#route-next").disabled=false;
   $("#route-next").textContent=state.activeStage===stages.length-1?"Завершить":"Далее →";
   const next=stages[state.activeStage+1]; const nextCard=$("#next-step-card");
@@ -456,7 +456,7 @@ async function startRoute(origin,destination) {
   try{
     const route=await buildRouteWithStreet(origin,destination,{signal:request.signal});
     if(request.signal.aborted||state.routeRequest!==request)return;
-    state.route=route;state.routeRequest=null;renderRouteResult();
+    state.route=route;state.routeRequest=null;renderRouteResult();return route;
   }catch(error){if(!request.signal.aborted)throw error;}
   finally{if(!state.routeRequest){$("#route-build").disabled=false;$("#route-build").textContent="Построить маршрут";}}
 }
@@ -491,8 +491,10 @@ function registerWebMcp() {
     inputSchema:{type:"object",properties:{originId:{type:"string"},destinationId:{type:"string"}},required:["originId","destinationId"],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},
     async execute({originId,destinationId}) {
       const origin=originLocations.find(item=>item.id===originId); const destination=locationById(destinationId);
-      if(!origin||!destination) throw new Error("Unknown originId or destinationId"); await startRoute(origin,destination);
-      return {status:state.route.status,kind:state.route.kind??null,estimatedMinutes:state.route.estimatedMinutes??null,steps:state.route.steps,stages:state.route.stages?.map(stage=>({kind:stage.kind,title:stage.title,summary:stage.summary}))??[]};
+      if(!origin||!destination) throw new Error("Unknown originId or destinationId");
+      const route=await startRoute(origin,destination);
+      if(!route)return {status:"cancelled"};
+      return {status:route.status,kind:route.kind??null,estimatedMinutes:route.estimatedMinutes??null,steps:route.steps,stages:route.stages?.map(stage=>({kind:stage.kind,title:stage.title,summary:stage.summary}))??[]};
     },
   });
 }

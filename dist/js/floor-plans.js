@@ -1,6 +1,6 @@
 // One geometry contract for rendering and routing. Coordinates are schematic
 // drawing units, not metres. Doors always connect to a named corridor node.
-const rect=(id,label,x,y,w,h,door,access,type="room")=>({id,label,type,rect:[x,y,w,h],point:[x+w/2,y+h/2],door,access});
+const rect=(id,label,x,y,w,h,door,access,type="room")=>({id,label,type,rect:[x,y,w,h],point:[x+w/2,y+h/2],door,access,...(type==="lift"?{shaftId:id.split("-").at(-1)}:{})});
 const line=(a,b)=>[a,b];
 
 export const surveyedPlans={
