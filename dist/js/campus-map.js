@@ -1,4 +1,4 @@
-import { buildingGeoJSON } from "./campus-data.js";
+import { buildingGeoJSON } from "./campus-data.js?v=71548f074fc1";
 
 // Schematic perimeter; not a cadastral boundary. The gap is beside the checkpoint.
 const fencePoints=[[37.79504,55.71879],[37.79467,55.71782],[37.79599,55.71759],[37.79650,55.71850],[37.79526,55.71883]];

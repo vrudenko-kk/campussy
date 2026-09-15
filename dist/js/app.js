@@ -1,7 +1,8 @@
-import { allSearchable, buildingById, getFloorPlan, locationById } from "./campus-data.js";
-import { createCampusMap } from "./campus-map.js";
-import { renderFloorMap } from "./floor-map.js";
-import { buildRoute } from "./router.js";
+import { allSearchable, buildingById, getFloorPlan, locationById } from "./campus-data.js?v=71548f074fc1";
+import { createCampusMap } from "./campus-map.js?v=71548f074fc1";
+import { renderFloorMap } from "./floor-map.js?v=71548f074fc1";
+import { buildRoute } from "./router.js?v=71548f074fc1";
+import { wingDirectory } from "./wing-directory.js?v=71548f074fc1";
 
 const SEARCH_PLACEHOLDER="Аудитория, столовая, КПП…";
 const RECENT_KEY="campussy-recent-searches";
@@ -175,6 +176,17 @@ function renderFloor({center=true}={}) {
     buildingId:state.buildingId,floor:state.floor,route:state.route,destinationId:state.destination?.id,
     originId:state.origin?.id,onLocationClick:location=>openLocationActions(location,{navigate:false}),stage:activeStage,
   });
+  const directory=$("#floor-directory"),list=$("#floor-directory-list");list.replaceChildren();
+  const entries=wingDirectory.filter(item=>item.buildingId===state.buildingId&&item.floor===state.floor);
+  directory.hidden=!!activeStage||!entries.length;directory.open=false;
+  $("#floor-directory-count").textContent=`· ${entries.length}`;
+  entries.forEach(entry=>{
+    const location=locationById(entry.id),button=document.createElement("button");button.type="button";
+    const number=document.createElement("b");number.textContent=entry.id;
+    const copy=document.createElement("span");copy.textContent=entry.purpose;
+    const status=document.createElement("small");status.textContent=location.verified?"На схеме по эскизу":"Нужна привязка двери";
+    button.append(number,copy,status);button.addEventListener("click",()=>openLocationActions(location));list.append(button);
+  });
   if (center) setMapZoom(1);
 }
 
@@ -274,7 +286,11 @@ function openLocationActions(location,{navigate=false}={}) {
   if (navigate&&location.buildingId&&location.floor) openFloor(location.buildingId,location.floor);
   $("#location-sheet-title").textContent=location.name;
   $("#location-sheet-meta").textContent=metaFor(location);
-  $("#location-sheet-note").textContent=!location.verified?"Точное расположение этого помещения ещё не отмечено на плане.":location.note??"Выберите, как использовать эту точку в маршруте.";
+  $("#location-sheet-note").textContent=location.note??(!location.verified?"Точное расположение этого помещения ещё не отмечено на плане.":"Выберите, как использовать эту точку в маршруте.");
+  const related=$("#location-related");related.replaceChildren();
+  (location.relatedIds??[]).map(locationById).filter(Boolean).forEach(item=>{
+    const button=createSearchButton(item);related.append(button);
+  });
   const unavailable=((!location.buildingId||!location.floor)&&!location.graphNode)||!location.verified;
   $("#route-from-location").disabled=unavailable; $("#route-to-location").disabled=unavailable;
   locationSheet.hidden=false; requestAnimationFrame(()=>locationSheet.classList.add("is-open")); updateBackdrop();
@@ -453,6 +469,7 @@ function registerWebMcp() {
 }
 
 async function init() {
+  window.matchMedia("(max-width: 760px)").addEventListener("change",()=>{if(state.view==="floor")renderFloor();});
   $("#map-zoom-in").addEventListener("click",()=>setMapZoom(state.zoom+.5));
   $("#map-zoom-out").addEventListener("click",()=>setMapZoom(state.zoom-.5));
   $("#map-fit").addEventListener("click",()=>setMapZoom(1));

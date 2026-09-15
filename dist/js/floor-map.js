@@ -1,4 +1,4 @@
-import { getFloorPlan, locationById, buildingById } from "./campus-data.js";
+import { getFloorPlan, locationById, buildingById } from "./campus-data.js?v=71548f074fc1";
 
 const NS="http://www.w3.org/2000/svg";
 const svgNode=(tag,attributes={})=>{
@@ -72,7 +72,7 @@ function transferMap(svg,options){
     const heading=svgNode("text",{x:40,y:panel.y+60,class:"transfer-heading"});
     heading.textContent=`${panel.label} · ${buildingById(panel.area).name} · ${panel.floor} этаж`;svg.append(heading);
     const map=svgNode("svg",{x:25,y:panel.y+80,width:1150,height:515});
-    renderFloorMap(map,{...options,buildingId:panel.area,floor:panel.floor,stage:{kind:"floor",points:panel.points}});
+    renderFloorMap(map,{...options,buildingId:panel.area,floor:panel.floor,embedded:true,stage:{kind:"floor",points:panel.points}});
     svg.append(map);
   }
   svg.append(svgNode("path",{d:"M 600 645 V 792 M 583 775 L 600 795 L 617 775",class:"transfer-link"}));
@@ -81,7 +81,7 @@ function transferMap(svg,options){
   svg.append(text(stage.fromFloor+" → "+stage.toFloor+" этаж",870,710,"transfer-copy"));
 }
 
-export function renderFloorMap(svg,{buildingId,floor,destinationId,originId,onLocationClick,stage}){
+export function renderFloorMap(svg,{buildingId,floor,destinationId,originId,onLocationClick,stage,embedded=false}){
   svg.replaceChildren();
   svg.setAttribute("preserveAspectRatio","xMidYMid meet");
   svg.classList.toggle("is-outdoor-map",stage?.kind==="outdoor");
@@ -93,9 +93,10 @@ export function renderFloorMap(svg,{buildingId,floor,destinationId,originId,onLo
     transferMap(svg,{buildingId,floor,destinationId,originId,onLocationClick,stage});return;
   }
   const plan=getFloorPlan(buildingId,floor);
-  svg.setAttribute("viewBox","0 0 "+plan.width+" "+plan.height);
+  const portrait=plan.rotateOnMobile&&!embedded&&window.matchMedia("(max-width: 760px)").matches;
+  svg.setAttribute("viewBox",portrait?`0 0 ${plan.height} ${plan.width}`:"0 0 "+plan.width+" "+plan.height);
   svg.setAttribute("data-plan",buildingId+":"+floor);
-  const content=svgNode("g",plan.image?{transform:"translate(0 "+plan.imageOffset+")"}:{});
+  const content=svgNode("g",portrait?{transform:`translate(${plan.height} 0) rotate(90)`}:plan.image?{transform:"translate(0 "+plan.imageOffset+")"}:{});
   svg.append(content);
   if(plan.image){
     content.append(svgNode("image",{href:plan.image,x:0,y:0,width:2000,height:1040,preserveAspectRatio:"xMidYMid meet"}));
@@ -116,13 +117,21 @@ export function renderFloorMap(svg,{buildingId,floor,destinationId,originId,onLo
       group.append(svgNode("path",{d:"M "+(x+8)+" "+(y+8)+" L "+(x+width-8)+" "+(y+height-8)+" M "+(x+width-8)+" "+(y+8)+" L "+(x+8)+" "+(y+height-8),class:"plan-lift-cross"}));
     }
     // Open a visible gap in the wall at the exact routable doorway.
-    const horizontal=Math.abs(room.door[1]-y)<1||Math.abs(room.door[1]-(y+height))<1;
-    group.append(svgNode("path",{d:horizontal?"M "+(room.door[0]-14)+" "+room.door[1]+" h 28":"M "+room.door[0]+" "+(room.door[1]-14)+" v 28",class:"plan-door"}));
-    const caption=svgNode("text",{x:room.point[0],y:room.point[1]-(room.type==="room"?30:0),class:"plan-label"+(room.type==="lift"||room.type==="stairs"?" is-small":"")});
+    for(const {point:door}of room.doors??[{point:room.door}]){
+      const horizontal=Math.abs(door[1]-y)<1||Math.abs(door[1]-(y+height))<1;
+      group.append(svgNode("path",{d:horizontal?"M "+(door[0]-14)+" "+door[1]+" h 28":"M "+door[0]+" "+(door[1]-14)+" v 28",class:"plan-door"}));
+    }
+    const endpoint=[stage?.points?.[0],stage?.points?.at(-1)].some(p=>p&&p[0]===room.point[0]&&p[1]===room.point[1]);
+    const offset=endpoint?55:0;
+    const caption=svgNode("text",{x:room.point[0]-(portrait?offset:0),y:room.point[1]-(portrait?0:offset),class:"plan-label"+(room.type==="lift"||room.type==="stairs"?" is-small":"")});
     caption.textContent=room.label;group.append(caption);
     interactive(group,locationById(room.id),onLocationClick);content.append(group);
   }
-  for(const caption of plan.captions??[])content.append(text(caption.text,...caption.point,"plan-caption"));
+  for(const points of plan.walls??[])content.append(svgNode("path",{d:"M "+points.map(p=>p.join(" ")).join(" L "),class:"plan-partition"}));
+  for(const points of plan.stepLines??[])content.append(svgNode("path",{d:"M "+points.map(p=>p.join(" ")).join(" L "),class:"plan-stair-line"}));
+  for(const points of plan.windows??[])content.append(svgNode("path",{d:"M "+points.map(p=>p.join(" ")).join(" L "),class:"plan-window"}));
+  if(!portrait)for(const caption of plan.captions??[])content.append(text(caption.text,...caption.point,"plan-caption"));
   if(stage?.kind==="floor")drawRoute(content,stage.points);
   if(stage?.connectorPoint)marker(content,stage.connectorPoint,stage.kind==="vertical"?(stage.toFloor>stage.fromFloor?"↑":"↓"):"↔","finish");
+  if(portrait)for(const label of content.querySelectorAll("text"))label.setAttribute("transform",`rotate(-90 ${label.getAttribute("x")} ${label.getAttribute("y")})`);
 }

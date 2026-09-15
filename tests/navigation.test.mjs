@@ -34,7 +34,7 @@ test("supplied 8th-floor room arrangement and equipment are retained",()=>{
 
 test("3310 route starts and ends at 3310 without render-order dependence",()=>{
   const room=getFloorPlan("c3",3).rooms.find(r=>r.id==="3310");
-  const forward=route("3310","2421"),reverse=route("2421","3310");
+  const forward=route("3310","3805"),reverse=route("3805","3310");
   assert.deepEqual(forward.stages[0].points[0],room.point);
   assert.deepEqual(reverse.stages.at(-1).points.at(-1),room.point);
   const before=JSON.stringify(getFloorPlan("c3",3));
@@ -85,7 +85,7 @@ test("lift to 8th floor and invalid route states",()=>{
 });
 
 test("transfers retain the correct approach and departure geometry in both directions",()=>{
-  for(const [a,b]of [["checkpoint","3805"],["3805","checkpoint"],["3310","2421"],["2421","3310"],["1202","3303"]]){
+  for(const [a,b]of [["checkpoint","3805"],["3805","checkpoint"],["3310","2418"],["2418","3310"],["cofix","3303"]]){
     const result=route(a,b);assert.equal(result.status,"ready");
     for(const stage of result.stages.filter(s=>s.kind==="vertical"||s.kind==="transition")){
       assert.deepEqual(stage.approachPoints.at(-1),stage.fromPoint);

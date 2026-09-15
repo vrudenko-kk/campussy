@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.9.0/dist/maplibre-gl.css" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=71548f074fc1" />
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23071d38'/%3E%3Cpath d='M13 45h38v5H13zm5-19h28v17H18zm-4-3 18-11 18 11v3H14z' fill='%2328b88b'/%3E%3Cpath d='M23 30v10m9-10v10m9-10v10' stroke='white' stroke-width='3'/%3E%3C/svg%3E" />
     <title>Навигация по кампусу · Финансовый университет</title>
   </head>
@@ -72,6 +72,7 @@
               <b aria-hidden="true">›</b>
             </button>
             <div class="data-note"><span>i</span><p id="plan-source"></p></div>
+            <details id="floor-directory" class="floor-directory" hidden><summary>Помещения по стенду <span id="floor-directory-count"></span></summary><p>Номер и назначение — со стенда. Для неподписанных на плане кабинетов маршрут станет доступен после привязки двери.</p><div id="floor-directory-list"></div></details>
           </section>
         </div>
         <footer class="route-dock" id="route-dock" hidden>
@@ -102,6 +103,7 @@
     <aside class="location-sheet" id="location-sheet" hidden role="dialog" aria-modal="true" aria-labelledby="location-sheet-title">
       <div class="location-sheet-head"><div><p class="eyebrow">Помещение</p><h2 id="location-sheet-title"></h2><span id="location-sheet-meta"></span></div><button type="button" id="location-close" aria-label="Закрыть карточку">×</button></div>
       <p id="location-sheet-note" class="location-sheet-note"></p>
+      <div id="location-related" class="location-related"></div>
       <div class="location-actions">
         <button type="button" class="button button-primary" id="route-from-location">Маршрут отсюда</button>
         <button type="button" class="button button-secondary" id="route-to-location">Маршрут сюда</button>
@@ -127,6 +129,6 @@
       </section>
     </aside>
 
-    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/app.js?v=71548f074fc1"></script>
   </body>
 </html>

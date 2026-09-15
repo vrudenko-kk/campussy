@@ -1,4 +1,4 @@
-import { buildingById, floorAreas, getFloorPlan, transitions } from "./campus-data.js";
+import { buildingById, floorAreas, getFloorPlan, transitions } from "./campus-data.js?v=71548f074fc1";
 
 const nodeId=(area,floor,id)=>area+":"+floor+":"+id;
 const roomId=location=>location.graphNode??nodeId(location.buildingId,location.floor,location.id);
@@ -23,10 +23,14 @@ export function getNavigationGraph(){
       for(const [id,point]of Object.entries(plan.nodes))addNode(key(id),point,area.id,floor);
       for(const room of plan.rooms){
         addNode(key(room.id),room.point,area.id,floor);
-        addNode(key(room.id+":door"),room.door,area.id,floor);
+        const doors=room.doors??[{point:room.door,access:room.access}];
+        doors.forEach((door,i)=>addNode(key(room.id+":door"+i),door.point,area.id,floor));
       }
       for(const [a,b]of plan.edges)join(key(a),key(b));
-      for(const room of plan.rooms){join(key(room.id),key(room.id+":door"));join(key(room.id+":door"),key(room.access));}
+      for(const room of plan.rooms){
+        const doors=room.doors??[{point:room.door,access:room.access}];
+        doors.forEach((door,i)=>{join(key(room.id),key(room.id+":door"+i));join(key(room.id+":door"+i),key(door.access));});
+      }
     }
     for(let i=1;i<area.floors.length;i++){
       const a=area.floors[i-1],b=area.floors[i];

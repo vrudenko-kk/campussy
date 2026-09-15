@@ -1,4 +1,6 @@
-import { surveyedPlans, entryPlan, genericPlan, legacyPlan } from "./floor-plans.js";
+import { surveyedPlans, entryPlan, genericPlan } from "./floor-plans.js?v=71548f074fc1";
+import { wingPlans } from "./wing-plans.js?v=71548f074fc1";
+import { wingDirectory, directoryById } from "./wing-directory.js?v=71548f074fc1";
 
 export const campus = {
   id: "veshnyakovsky-4",
@@ -86,34 +88,10 @@ export const transitions = [
 ];
 
 const explicit = [
-  ["1117","Студенческий офис","c1",1,"service","Сведения университета"],
-  ["1201","Декан","c1",2,"service","Сведения университета"],
-  ["1213","Деканат","c1",2,"service","Сведения университета"],
-  ["1214","Первый заместитель декана","c1",2,"service","Сведения университета"],
-  ["1305","Аудитория 1305","c1",3,"room","Кафедра ИБ"],
-  ["1306","Аудитория 1306","c1",3,"room","Кафедра БИ"],
-  ["1313","Аудитория 1313","c1",3,"room","Кафедра БИ"],
-  ["1314","Аудитория 1314","c1",3,"room","Кафедра АДиМО"],
-  ["1315","Аудитория 1315","c1",3,"room","Кафедра АДиМО"],
-  ["1407","Аудитория 1407","c1",4,"room","Кафедра ИБ"],
-  ["1408","Аудитория 1408","c1",4,"room","Кафедра ИБ"],
-  ["1502","Аудитория 1502","c1",5,"room","Оцифровано по эскизу"],
-  ["1503","Аудитория 1503","c1",5,"room","Оцифровано по эскизу"],
-  ["1504","Аудитория 1504","c1",5,"room","Оцифровано по эскизу"],
-  ["1512","Аудитория 1512","c1",5,"room","Оцифровано по эскизу"],
-  ["1513","Аудитория 1513","c1",5,"room","Оцифровано по эскизу"],
-  ["1514","Аудитория 1514","c1",5,"room","Оцифровано по эскизу"],
-  ["1515","Аудитория 1515","c1",5,"room","Оцифровано по эскизу"],
-  ["1517","Кабинет психолога","c1",5,"service","Расположение на этаже уточняется"],
-  ["2116","Большой коворкинг","c2",1,"service","Сведения университета"],
-  ["2121","Малый коворкинг","c2",1,"service","Сведения университета"],
-  ["2132","Медиатека","c2",1,"service","Сведения университета"],
   ["3205","Цифровая кафедра Альфа-Банка","c3",2,"service","Сведения университета"],
 ];
 
 const roomRanges = [
-  ["c1",2,1202,1217],["c1",3,1302,1317],["c1",4,1402,1417],["c1",5,1502,1517],
-  ["c2",1,2118,2133],["c2",2,2218,2233],["c2",3,2318,2333],["c2",4,2418,2433],["c2",5,2518,2533],
   ["c3",2,3202,3212],["c3",3,3302,3311],["c3",4,3402,3411],["c3",5,3502,3511],
   ["c3",6,3602,3611],["c3",7,3702,3711],["c3",8,3802,3811],["c3",9,3902,3911],
 ];
@@ -125,28 +103,35 @@ const generatedRooms = roomRanges.flatMap(([buildingId,floor,start,end]) =>
   })
 );
 
-const coordinateOverrides = {
-  "1502": { point:[1660,390], door:[1470,545], label:[1660,385] },
-  "1503": { point:[745,710], door:[760,555], label:[745,715] },
-  "1504": { point:[1315,710], door:[1280,555], label:[1315,715] },
-  "1512": { point:[270,590], door:[550,555], label:[270,590] },
-  "1513": { point:[270,365], door:[550,555], label:[270,365] },
-  "1514": { point:[800,410], door:[760,555], label:[800,410] },
-  "1515": { point:[1160,410], door:[1030,555], label:[1160,410] },
-};
-
 const planLocations=Object.entries(surveyedPlans).flatMap(([key,plan])=>{
   const [buildingId,floor]=key.split(":");
   return plan.rooms.map(room=>[room.id,room.type==="room"?"Аудитория "+room.id:room.type==="lift"?"Лифт "+room.label.slice(1)+" · "+floor+"-й этаж":room.type==="restroom"?"Туалет · "+(room.id.endsWith("w")?"левое":"правое")+" крыло · "+floor+"-й этаж":room.label,buildingId,Number(floor),room.type,plan.source]);
 });
 
-export const locations = [...explicit,...planLocations,...generatedRooms]
+const otherLocations = [...explicit,...planLocations,...generatedRooms].filter(item=>item[2]==="c3")
   .filter((item,index,all) => all.findIndex(candidate => candidate[0] === item[0]) === index)
   .map(([id,name,buildingId,floor,type,note]) => ({
     id,name,buildingId,floor,type,note,
-    verified: note !== "Расположение на этаже уточняется" && !(buildingId==="c1" && floor===5 && !coordinateOverrides[id]) && !(buildingId==="c3" && floor===8 && !surveyedPlans["c3:8"].rooms.some(room=>room.id===id)),
-    ...coordinateOverrides[id],
+    verified: note !== "Расположение на этаже уточняется" && !(buildingId==="c3" && floor===8 && !surveyedPlans["c3:8"].rooms.some(room=>room.id===id)),
   }));
+
+const wingRoomIndex=new Map(Object.values(wingPlans).flatMap(plan=>plan.rooms.map(room=>[room.id,room])));
+const wingLocations=Object.entries(wingPlans).flatMap(([key,plan])=>{
+  const [buildingId,floor]=key.split(":");
+  return plan.rooms.filter(room=>room.id!=="cofix").map(room=>{
+    const board=directoryById.get(room.id);
+    if(board)room.type=board.type;
+    return {
+      id:room.id,name:board?.name??(room.number?"Аудитория "+room.id:room.type==="room"?"Помещение "+room.label+" на плане":room.label+" · "+(room.point[0]<plan.width/2?"левая сторона":"правая сторона")),
+      buildingId,floor:Number(floor),type:board?.type??room.type,verified:true,
+      aliases:board?.purpose??"",purpose:board?.purpose,
+      positionBasis:room.positionBasis,
+      note:(board?board.purpose+". ":"")+(room.number?(buildingId==="c2"?"Зеркальная привязка по вашему эскизу корпуса 1 и правилу нумерации +16. Требует очной сверки.":"Привязка по вашему эскизу 5-го этажа; на других этажах перенесены совпадающие участки. Требует очной сверки."):"Контур и проход по плану. Обозначение "+room.label+" — метка на схеме, не номер кабинета."),
+    };
+  });
+});
+const unmappedDirectory=wingDirectory.filter(entry=>!wingRoomIndex.has(entry.id)).map(entry=>({...entry,verified:false,positionBasis:"unmapped",note:entry.purpose+". Номер и назначение подтверждены стендом; положение двери на плане ещё не подписано."}));
+export const locations=[...otherLocations,...wingLocations,...unmappedDirectory];
 
 export const sharedFacilities = [
   { id:"checkpoint", name:"КПП · Проходная", aliases:"кпп проходная контроль пропускной пункт", type:"checkpoint", buildingId:null, floor:null, graphNode:"checkpoint", zone:"Территория кампуса · у 4-го Вешняковского проезда", note:"Отдельное здание проходной рядом с въездом в кампус", verified:true, mapLabel:"КПП" },
@@ -156,10 +141,10 @@ export const sharedFacilities = [
   { id:"buffet", name:"Буфет у главного входа", aliases:"буфет", type:"food", buildingId:"entry", floor:1, zone:"Главный вход · 1-й этаж", note:"На 1-м этаже общего входного блока", verified:true, mapLabel:"БФ" },
   { id:"cofix", name:"Coffix", aliases:"кофикс кофейня coffee fix cofix", type:"food", buildingId:"c1", floor:2, zone:"Переход корпусов 1 и 3", note:"У перехода из корпуса 1 в корпус 3", verified:true, mapLabel:"Coffix" },
   { id:"canteen", name:"Столовая", type:"food", buildingId:"entry", floor:2, zone:"Главный вход · 2-й этаж", note:"От главного входа поднимитесь на 2-й этаж", verified:true, mapLabel:"СТ" },
-  { id:"library", name:"Библиотека", aliases:"медиатека", type:"service", buildingId:"c2", floor:1, zone:"Корпус 2 · 1-й этаж", note:"1-й этаж корпуса 2", verified:true, mapLabel:"Б" },
+  { id:"library", name:"Библиотека", aliases:"медиатека", type:"service", buildingId:"c2", floor:1, zone:"Корпус 2 · 1-й этаж", note:"Библиотека: помещения 2129 и 2132 по стенду корпуса 2. Точная привязка дверей ожидает разметки.", relatedIds:["2129","2132"], verified:false, mapLabel:"Б" },
   { id:"wardrobe", name:"Гардеробы", type:"facility", floor:1, zone:"Общий блок 1–2 этажей", verified:false },
-  { id:"gym", name:"Спортивный зал", aliases:"спортзал", type:"facility", buildingId:"c1", floor:1, zone:"Корпус 1 · 1-й этаж", note:"1-й этаж корпуса 1", verified:true, mapLabel:"СП" },
-  { id:"medical", name:"Медпункт", type:"service", floor:1, zone:"Общий блок 1–2 этажей", verified:false },
+  { id:"gym", name:"Спортивный зал", aliases:"спортзал", type:"facility", buildingId:"c1", floor:1, zone:"Корпус 1 · 1-й этаж", note:"Спортивные помещения 1107, 1100, 1101 и 1102 по стенду корпуса 1.", relatedIds:["1107","1100","1101","1102"], verified:false, mapLabel:"СП" },
+  { id:"medical", name:"Медицинский кабинет", type:"service", buildingId:"c1", floor:1, relatedIds:["1106"], note:"Медицинский кабинет 1106 по стенду корпуса 1.", verified:false },
   { id:"restroom", name:"Санузлы", type:"restroom", floor:null, zone:"Расположение требует уточнения", verified:false },
 ];
 
@@ -178,7 +163,7 @@ export function getFloorPlan(buildingId,floor) {
   const key=buildingId+":"+Number(floor);
   if(!planCache.has(key)){
     const rooms=locationsOnFloor(buildingId,floor);
-    const plan=surveyedPlans[key]??(buildingId==="entry"?entryPlan(floor):buildingId==="c1"&&Number(floor)===5?legacyPlan(rooms):genericPlan(buildingId,floor,rooms));
+    const plan=wingPlans[key]??surveyedPlans[key]??(buildingId==="entry"?entryPlan(floor):genericPlan(buildingId,floor,rooms));
     planCache.set(key,plan);
   }
   return planCache.get(key);

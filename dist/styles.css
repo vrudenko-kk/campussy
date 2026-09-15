@@ -280,6 +280,16 @@ body.route-active .app-main { min-height:0; }
 .transfer-copy { fill:#315b8c; font:600 27px Inter,Arial,sans-serif; text-anchor:middle; }
 .plan-direction { fill:#1476e8; stroke:#fff; stroke-width:2; pointer-events:none; }
 .plan-fence { fill:none; stroke:#60778b; stroke-width:4; stroke-dasharray:8 5; }
+.plan-partition { fill:none; stroke:#2c425e; stroke-width:5; stroke-linecap:square; pointer-events:none; }
+.plan-window { fill:none; stroke:#aac6d9; stroke-width:5; pointer-events:none; }
+.plan-room.is-service { fill:#eee9f7; }
+.floor-directory { margin:0 12px 12px; border:1px solid var(--line); border-radius:12px; background:#fff; }
+.floor-directory summary { padding:14px; cursor:pointer; font-size:14px; font-weight:700; }
+.floor-directory p { margin:0; padding:0 14px 12px; font-size:14px; color:var(--muted); line-height:1.5; }
+#floor-directory-list { display:grid; gap:1px; background:var(--line); border-radius:0 0 12px 12px; overflow:hidden; }
+#floor-directory-list button { padding:12px 14px; border:0; display:grid; grid-template-columns:48px minmax(0,1fr); gap:4px 12px; text-align:left; background:#fff; cursor:pointer; }
+#floor-directory-list button:hover { background:#eef5fc; }#floor-directory-list small { grid-column:2; color:var(--muted); font-size:12px; }
+.location-related:empty { display:none; }.location-related { margin-bottom:12px; border:1px solid var(--line); border-radius:12px; }
 @media(min-width:761px) {
   :root { --header-height:72px; }.brand-logo { width:160px; height:48px; }
   .app-header { grid-template-columns:160px minmax(0,620px) auto; height:72px; padding-block:10px; }
