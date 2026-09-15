@@ -3,6 +3,7 @@ import { buildingById, buildings, transitions } from "./campus-data.js";
 const detailedCorridor = [[550,555],[760,555],[1030,555],[1280,555],[1470,545]];
 const nodeKey = (buildingId,floor) => `${buildingId}:${floor}`;
 const nodeFromKey = key => { const [buildingId,floor]=key.split(":"); return {buildingId,floor:Number(floor)}; };
+const accessOf = location => location.routeAccess??{buildingId:location.buildingId,floor:location.floor};
 
 function nearestIndex(point,nodes=detailedCorridor) {
   return nodes.reduce((best,node,index) => Math.abs(node[0]-point[0]) < Math.abs(nodes[best][0]-point[0]) ? index : best,0);
@@ -44,7 +45,8 @@ function buildCampusGraph() {
 }
 
 function shortestPath(origin,destination) {
-  const graph=buildCampusGraph(); const start=nodeKey(origin.buildingId,origin.floor); const end=nodeKey(destination.buildingId,destination.floor);
+  const graph=buildCampusGraph(); const originAccess=accessOf(origin); const destinationAccess=accessOf(destination);
+  const start=nodeKey(originAccess.buildingId,originAccess.floor); const end=nodeKey(destinationAccess.buildingId,destinationAccess.floor);
   const distances=new Map([...graph.keys()].map(key=>[key,Infinity])); const previous=new Map(); const unvisited=new Set(graph.keys());
   distances.set(start,0);
   while (unvisited.size) {
@@ -106,14 +108,33 @@ function floorStagePoints(location,role) {
     : [[1740,520],[980,520],[1500,520],[1500,690]];
 }
 
+function outdoorStage(location,role) {
+  const access=accessOf(location); const toEntrance=role==="start";
+  return {
+    kind:"outdoor",role,buildingId:access.buildingId,floor:access.floor,
+    title:"Территория кампуса",
+    summary:toEntrance?"От КПП до центрального входа":"От центрального входа до КПП",
+    detail:toEntrance
+      ? "Выйдите из проходной и следуйте по территории кампуса к центральному входу корпуса 3."
+      : "Выйдите из корпуса 3 через центральный вход и следуйте по территории кампуса к проходной.",
+  };
+}
+
+function floorStage(location,role) {
+  return {
+    kind:"floor",role,buildingId:location.buildingId,floor:location.floor,
+    title:`${buildingById(location.buildingId).name} · ${location.floor}-й этаж`,
+    summary:role==="start"?`От «${location.name}» к следующей точке маршрута`:`До «${location.name}»`,
+    detail:role==="start"
+      ? `Выйдите из «${location.name}» в основной коридор и следуйте к отмеченной точке перехода.`
+      : `На ${location.floor}-м этаже следуйте по отмеченному участку маршрута до «${location.name}».`,
+    points:floorStagePoints(location,role),
+  };
+}
+
 function buildStages(origin,destination,groups) {
-  const stages=[{
-    kind:"floor",role:"start",buildingId:origin.buildingId,floor:origin.floor,
-    title:`${buildingById(origin.buildingId).name} · ${origin.floor}-й этаж`,
-    summary:`От «${origin.name}» к следующей точке маршрута`,
-    detail:`Выйдите из «${origin.name}» в основной коридор и следуйте к отмеченной точке перехода.`,
-    points:floorStagePoints(origin,"start"),
-  }];
+  const originAccess=accessOf(origin); const destinationAccess=accessOf(destination);
+  const stages=[origin.routeAccess?outdoorStage(origin,"start"):floorStage(origin,"start")];
   groups.forEach(group=>{
     const from=nodeFromKey(group.from); const to=nodeFromKey(group.to);
     if (group.kind==="vertical") {
@@ -122,8 +143,10 @@ function buildStages(origin,destination,groups) {
       stages.push({kind:"transition",buildingId:to.buildingId,floor:to.floor,fromBuildingId:from.buildingId,fromFloor:from.floor,toBuildingId:to.buildingId,toFloor:to.floor,title:group.transition.name,summary:`${buildingById(from.buildingId).name}, ${from.floor}-й этаж → ${buildingById(to.buildingId).name}, ${to.floor}-й этаж`,detail:transitionText(group)});
     }
   });
-  if (origin.buildingId!==destination.buildingId || origin.floor!==destination.floor) {
-    stages.push({kind:"floor",role:"finish",buildingId:destination.buildingId,floor:destination.floor,title:`${buildingById(destination.buildingId).name} · ${destination.floor}-й этаж`,summary:`До «${destination.name}»`,detail:`На ${destination.floor}-м этаже следуйте по отмеченному участку маршрута до «${destination.name}».`,points:floorStagePoints(destination,"finish")});
+  if (destination.routeAccess) {
+    stages.push(outdoorStage(destination,"finish"));
+  } else if (originAccess.buildingId!==destinationAccess.buildingId || originAccess.floor!==destinationAccess.floor || origin.routeAccess) {
+    stages.push(floorStage(destination,"finish"));
   }
   return stages;
 }
@@ -136,7 +159,8 @@ export function buildRoute(origin,destination) {
     return {status:"unverified",points:null,stages:[],steps:[`Для «${location.name}» известна общая зона, но точное положение на плане ещё не подтверждено.`]};
   }
 
-  const sameFloor=origin.buildingId===destination.buildingId && origin.floor===destination.floor;
+  const originAccess=accessOf(origin); const destinationAccess=accessOf(destination);
+  const sameFloor=!origin.routeAccess&&!destination.routeAccess&&originAccess.buildingId===destinationAccess.buildingId&&originAccess.floor===destinationAccess.floor;
   if (sameFloor) {
     const points=sameFloorPoints(origin,destination);
     return {
@@ -149,9 +173,17 @@ export function buildRoute(origin,destination) {
   const path=shortestPath(origin,destination);
   if (!path) return {status:"unavailable",kind:"unavailable",points:null,stages:[],steps:["Для выбранных точек пока нет связного маршрута."]};
   const groups=groupEdges(path.edges);
-  const steps=[`Выйдите из «${origin.name}» в основной коридор.`,...groups.map(group=>group.kind==="vertical"?verticalText(group):transitionText(group)),`На ${destination.floor}-м этаже следуйте к «${destination.name}».`];
+  const steps=[
+    origin.routeAccess
+      ? "От КПП пройдите по территории кампуса к центральному входу корпуса 3."
+      : `Выйдите из «${origin.name}» в основной коридор.`,
+    ...groups.map(group=>group.kind==="vertical"?verticalText(group):transitionText(group)),
+    destination.routeAccess
+      ? "Выйдите через центральный вход корпуса 3 и пройдите по территории кампуса к КПП."
+      : `На ${destination.floor}-м этаже следуйте к «${destination.name}».`,
+  ];
   return {
-    status:"ready",kind:origin.buildingId===destination.buildingId?"cross-floor":"cross-building",points:null,
-    cost:path.cost,estimatedMinutes:Math.max(3,Math.round((path.cost+8)/6)),steps,stages:buildStages(origin,destination,groups),
+    status:"ready",kind:originAccess.buildingId===destinationAccess.buildingId?"cross-floor":"cross-building",points:null,
+    cost:path.cost,estimatedMinutes:Math.max(3,Math.round((path.cost+8+(origin.routeAccess||destination.routeAccess?8:0))/6)),steps,stages:buildStages(origin,destination,groups),
   };
 }

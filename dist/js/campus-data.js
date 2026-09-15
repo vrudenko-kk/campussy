@@ -52,6 +52,14 @@ export const buildingGeoJSON = {
         [37.7955532,55.7182947]
       ]] },
     },
+    {
+      type: "Feature",
+      properties: { id: "checkpoint-building", name: "КПП", levels: 1, height: 4, color: "#071d38", osmId: "1176935279", interactive: false },
+      geometry: { type: "Polygon", coordinates: [[
+        [37.7951210,55.7187570],[37.7952931,55.7187348],[37.7952610,55.7186559],
+        [37.7950890,55.7186780],[37.7951210,55.7187570]
+      ]] },
+    },
   ],
 };
 
@@ -131,7 +139,7 @@ export const locations = [...explicit,...generatedRooms]
   }));
 
 export const sharedFacilities = [
-  { id:"checkpoint", name:"КПП · Проходная", aliases:"кпп проходная контроль пропускной пункт", type:"checkpoint", buildingId:"c3", floor:1, zone:"У 4-го Вешняковского проезда", note:"Небольшое здание проходной рядом с въездом в кампус", verified:true, mapLabel:"КПП" },
+  { id:"checkpoint", name:"КПП · Проходная", aliases:"кпп проходная контроль пропускной пункт", type:"checkpoint", buildingId:null, floor:null, routeAccess:{buildingId:"c3",floor:1}, zone:"Территория кампуса · у 4-го Вешняковского проезда", note:"Отдельное здание проходной рядом с въездом в кампус", verified:true, mapLabel:"КПП" },
   { id:"atm", name:"Банкоматы", type:"facility", floor:1, zone:"Общий блок 1–2 этажей", verified:false },
   { id:"buffet", name:"Буфет у центрального входа", aliases:"буфет", type:"food", buildingId:"c3", floor:1, zone:"Корпус 3 · 1-й этаж", note:"На 1-м этаже от центрального входа", verified:true, mapLabel:"БФ" },
   { id:"cofix", name:"Coffee Fix", aliases:"кофикс кофейня", type:"food", buildingId:"c1", floor:2, zone:"Переход корпусов 1 и 3", note:"У перехода из корпуса 1 в корпус 3", verified:true, mapLabel:"CF" },

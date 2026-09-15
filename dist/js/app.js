@@ -36,7 +36,7 @@ const entrances=buildings.map(building=>({
   id:`entrance-${building.id}`,name:building.id==="c3"?"Центральный вход":`Главный вход · ${building.name}`,
   buildingId:building.id,floor:1,type:"entrance",verified:true,
 }));
-const originLocations=[...entrances,...locations,...sharedFacilities.filter(location=>location.buildingId)];
+const originLocations=[...entrances,...locations,...sharedFacilities.filter(location=>location.buildingId||location.routeAccess)];
 
 function metaFor(location) {
   if (location.type==="checkpoint") return location.zone;
@@ -141,6 +141,12 @@ function selectBuilding(buildingId) {
 }
 
 function updateFloorHeading() {
+  const activeStage=state.route?.stages?.[state.activeStage];
+  if (activeStage?.kind==="outdoor") {
+    $("#floor-building-name").textContent="Территория кампуса";
+    $("#floor-title").textContent="КПП ↔ центральный вход";
+    return;
+  }
   const building=buildingById(state.buildingId);
   $("#floor-building-name").textContent=building.name;
   $("#floor-title").textContent=`${state.floor}-й этаж`;
@@ -149,6 +155,9 @@ function updateFloorHeading() {
 function renderFloorControls() {
   const building=buildingById(state.buildingId); updateFloorHeading();
   const buttons=$("#floor-buttons"); buttons.replaceChildren();
+  const activeStage=state.route?.stages?.[state.activeStage];
+  buttons.hidden=activeStage?.kind==="outdoor";
+  if (activeStage?.kind==="outdoor") return;
   building.floors.forEach(floor=>{
     const button=document.createElement("button"); button.type="button";
     button.className=`floor-tab${floor===state.floor?" is-active":""}`; button.textContent=String(floor);
@@ -163,10 +172,13 @@ function renderFloorControls() {
 }
 
 function renderFloor({center=true}={}) {
+  const activeStage=state.route?.stages?.[state.activeStage];
   renderFloorControls();
+  $("#floor-map-title").textContent=activeStage?.kind==="outdoor"?"Путь от проходной":"План этажа";
+  $("#floor-map-subtitle").textContent=activeStage?.kind==="outdoor"?"КПП — отдельное здание на территории кампуса":"Нажмите на аудиторию для действий";
   renderFloorMap(floorSvg,{
     buildingId:state.buildingId,floor:state.floor,route:state.route,destinationId:state.destination?.id,
-    originId:state.origin?.id,onLocationClick:location=>openLocationActions(location,{navigate:false}),
+    originId:state.origin?.id,onLocationClick:location=>openLocationActions(location,{navigate:false}),stage:activeStage,
   });
   if (center) requestAnimationFrame(()=>{ floorCanvas.scrollLeft=Math.max(0,(floorCanvas.scrollWidth-floorCanvas.clientWidth)/2); });
 }
@@ -175,6 +187,7 @@ function openFloor(buildingId,floor,{keepRoute=false}={}) {
   state.view="floor"; state.buildingId=buildingId; state.floor=Number(floor);
   if (!keepRoute) {
     state.route=null; state.activeStage=0; routeJourney.hidden=true; floorView.classList.remove("is-route-mode");
+    $("#next-step-card").hidden=true;
   }
   campusView.hidden=true; floorView.hidden=false; renderFloor();
   window.scrollTo({top:0,behavior:"smooth"});
@@ -252,7 +265,7 @@ function openLocationActions(location,{navigate=false}={}) {
   $("#location-sheet-title").textContent=location.name;
   $("#location-sheet-meta").textContent=metaFor(location);
   $("#location-sheet-note").textContent=location.note??"Выберите, как использовать эту точку в маршруте.";
-  const unavailable=!location.buildingId||!location.floor||!location.verified;
+  const unavailable=((!location.buildingId||!location.floor)&&!location.routeAccess)||!location.verified;
   $("#route-from-location").disabled=unavailable; $("#route-to-location").disabled=unavailable;
   locationSheet.hidden=false; requestAnimationFrame(()=>locationSheet.classList.add("is-open")); updateBackdrop();
 }
@@ -290,6 +303,10 @@ function beginRouteToSelected() {
 }
 
 function stageVisualMarkup(stage) {
+  if (stage.kind==="outdoor") {
+    const from=stage.role==="start"?"КПП":"Вход"; const to=stage.role==="start"?"Вход":"КПП";
+    return `<span class="stage-node"><b>${from}</b><small>улица</small></span><i aria-hidden="true">→</i><span class="stage-node"><b>${to}</b><small>кампус</small></span>`;
+  }
   if (stage.kind==="vertical") {
     const direction=stage.toFloor>stage.fromFloor?"↑":"↓";
     return `<span class="stage-node"><b>${stage.fromFloor}</b><small>этаж</small></span><i aria-hidden="true">${direction}</i><span class="stage-node"><b>${stage.toFloor}</b><small>этаж</small></span>`;
@@ -307,10 +324,19 @@ function renderCurrentStage() {
   $("#current-step-index").textContent=`Шаг ${state.activeStage+1} из ${stages.length}`;
   $("#current-step-title").textContent=stage.summary;
   $("#current-step-detail").textContent=stage.detail??stage.title;
-  $("#current-step-icon").textContent=stage.kind==="vertical"?(stage.toFloor>stage.fromFloor?"↑":"↓"):stage.kind==="transition"?"⇄":"→";
+  const stageIcon=current=>current.kind==="vertical"?(current.toFloor>current.fromFloor?"↑":"↓"):current.kind==="transition"?"⇄":current.kind==="outdoor"?"⌖":"→";
+  $("#current-step-icon").textContent=stageIcon(stage);
   const visual=$("#current-stage-visual"); visual.className=`current-stage-visual is-${stage.kind}`; visual.innerHTML=stageVisualMarkup(stage);
   $("#route-prev").disabled=state.activeStage===0; $("#route-next").disabled=state.activeStage===stages.length-1;
   $("#route-next").textContent=state.activeStage===stages.length-1?"Вы на месте":"Далее →";
+  const next=stages[state.activeStage+1]; const nextCard=$("#next-step-card");
+  nextCard.hidden=!next;
+  if (next) {
+    $("#next-step-icon").textContent=stageIcon(next);
+    $("#next-step-title").textContent=next.summary;
+    $("#next-step-detail").textContent=next.title;
+    nextCard.className=`next-step-card is-${next.kind}`;
+  }
   journeyCards.querySelectorAll(".journey-card").forEach((card,index)=>{
     const active=index===state.activeStage; card.classList.toggle("is-active",active); card.setAttribute("aria-pressed",String(active));
   });
@@ -326,7 +352,7 @@ function showRouteStage(stage,index,{scroll=true}={}) {
 function renderJourney() {
   journeyCards.replaceChildren(); journeySteps.replaceChildren();
   const stages=state.route?.stages??[];
-  if (state.route?.status!=="ready"||!stages.length) { routeJourney.hidden=true; floorView.classList.remove("is-route-mode"); return; }
+  if (state.route?.status!=="ready"||!stages.length) { routeJourney.hidden=true; $("#next-step-card").hidden=true; floorView.classList.remove("is-route-mode"); return; }
   floorView.classList.add("is-route-mode"); routeDetails.open=false; $("#route-details-label").textContent="Показать весь маршрут";
   $("#route-journey-title").textContent=`Маршрут к ${state.destination.name}`;
   $("#journey-meta").textContent=`${stages.length} ${stageWord(stages.length)} · ~${state.route.estimatedMinutes} мин`;
@@ -342,7 +368,7 @@ function renderJourney() {
     card.setAttribute("aria-pressed",String(index===state.activeStage)); card.addEventListener("click",()=>showRouteStage(stage,index));
     const head=document.createElement("span"); head.className="journey-card-head";
     const step=document.createElement("small"); step.textContent=`Шаг ${index+1}`;
-    const type=document.createElement("b"); type.textContent=stage.kind==="vertical"?"Этаж":stage.kind==="transition"?"Корпус":"По этажу";
+    const type=document.createElement("b"); type.textContent=stage.kind==="vertical"?"Этаж":stage.kind==="transition"?"Корпус":stage.kind==="outdoor"?"Улица":"По этажу";
     head.append(step,type);
     const visual=document.createElement("span"); visual.className="stage-visual"; visual.innerHTML=stageVisualMarkup(stage);
     const title=document.createElement("strong"); title.className="journey-card-title"; title.textContent=stage.summary;
@@ -436,6 +462,7 @@ async function init() {
   $("#route-build").addEventListener("click",buildSelectedRoute); $("#route-close").addEventListener("click",closeRouteSheet);
   $("#route-edit").addEventListener("click",openRouteEditor); $("#route-prev").addEventListener("click",()=>showRouteStage(state.route.stages[state.activeStage-1],state.activeStage-1));
   $("#route-next").addEventListener("click",()=>showRouteStage(state.route.stages[state.activeStage+1],state.activeStage+1));
+  $("#next-step-card").addEventListener("click",()=>showRouteStage(state.route.stages[state.activeStage+1],state.activeStage+1));
   $("#location-close").addEventListener("click",closeLocationSheet);
   $("#route-from-location").addEventListener("click",event=>{ event.stopPropagation(); beginRouteFromSelected(); });
   $("#route-to-location").addEventListener("click",beginRouteToSelected);

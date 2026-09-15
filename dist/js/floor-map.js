@@ -44,8 +44,38 @@ function makeRoomInteractive(group,location,onLocationClick) {
   });
 }
 
-export function renderFloorMap(svg,{buildingId,floor,route,destinationId,originId,onLocationClick}) {
+function renderOutdoorAccessMap(svg,stage) {
+  svg.setAttribute("viewBox","0 0 1000 760");
+  const title=svgNode("title"); title.textContent="Маршрут между КПП и центральным входом";
+  const desc=svgNode("desc"); desc.textContent="Схема территории кампуса с проходной, центральным входом и пешеходным маршрутом.";
+  svg.append(title,desc,svgNode("rect",{x:20,y:20,width:960,height:720,rx:28,class:"floor-bg"}));
+
+  svg.append(svgNode("path",{d:"M850 40 L925 40 L925 720 L850 720 Z",class:"outdoor-road"}));
+  const roadLabel=svgNode("text",{x:888,y:385,class:"outdoor-road-label",transform:"rotate(90 888 385)"});
+  roadLabel.textContent="4-й Вешняковский проезд"; svg.append(roadLabel);
+
+  svg.append(
+    svgNode("path",{d:"M120 120 H470 V280 H625 V545 H310 V455 H120 Z",class:"outdoor-building"}),
+    svgNode("path",{d:"M470 120 H790 V455 H625 V280 H470 Z",class:"outdoor-building is-secondary"}),
+    svgNode("rect",{x:735,y:575,width:105,height:74,rx:10,class:"outdoor-checkpoint"}),
+  );
+  const campusLabel=svgNode("text",{x:455,y:245,class:"outdoor-label"}); campusLabel.textContent="Корпус 3";
+  const entryLabel=svgNode("text",{x:625,y:530,class:"outdoor-small-label"}); entryLabel.textContent="Центральный вход";
+  const checkpointLabel=svgNode("text",{x:787,y:620,class:"outdoor-checkpoint-label"}); checkpointLabel.textContent="КПП";
+  svg.append(campusLabel,entryLabel,checkpointLabel);
+
+  const fromCheckpoint=stage.role==="start";
+  const points=fromCheckpoint?[[787,612],[700,612],[700,545],[625,545]]:[[625,545],[700,545],[700,612],[787,612]];
+  const value=points.map(point=>point.join(",")).join(" ");
+  svg.append(svgNode("polyline",{points:value,class:"floor-route-halo"}),svgNode("polyline",{points:value,class:"floor-route"}));
+  const markers=svgNode("g");
+  addMarker(markers,points[0],"A","route-start"); addMarker(markers,points.at(-1),"Б","route-end"); svg.append(markers);
+}
+
+export function renderFloorMap(svg,{buildingId,floor,route,destinationId,originId,onLocationClick,stage}) {
   svg.replaceChildren();
+  svg.classList.toggle("is-outdoor-map",stage?.kind==="outdoor");
+  if (stage?.kind==="outdoor") { renderOutdoorAccessMap(svg,stage); return; }
   svg.setAttribute("viewBox","0 0 2000 900");
   const title=svgNode("title"); title.textContent=`Карта ${floor}-го этажа`;
   const desc=svgNode("desc"); desc.textContent="Схематичный план с аудиториями и маршрутом.";

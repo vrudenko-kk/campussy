@@ -26,54 +26,56 @@ export async function createCampusMap(container,onBuildingSelect,onCheckpointSel
 
   let selectedId = "c3";
   let hoveredId = null;
-  const centers=Object.fromEntries(buildingGeoJSON.features.filter(feature=>feature.properties.id!=="link").map(feature=>{
+  const centers=Object.fromEntries(buildingGeoJSON.features.filter(feature=>["c1","c2","c3"].includes(feature.properties.id)).map(feature=>{
     const points=feature.geometry.coordinates[0]; const center=points.reduce((sum,[lng,lat])=>[sum[0]+lng,sum[1]+lat],[0,0]).map(value=>value/points.length);
     return [feature.properties.id,center];
   }));
 
   map.on("load",() => {
-    // Убираем подписи POI базовой карты: длинное название университета
-    // накладывается на нашу корпусную схему и дублирует её навигацию.
-    ["poi_r20","poi_r7","poi_r1"].forEach(layerId=>{
+    // Базовые здания и POI перекрывают нашу точную модель кампуса и дают
+    // полупрозрачные «смазанные» грани, поэтому оставляем только дороги и фон.
+    const baseBuildingLayers=(map.getStyle().layers??[])
+      .filter(layer=>layer["source-layer"]==="building" || /^building(?:-|$)/.test(layer.id))
+      .map(layer=>layer.id);
+    [...new Set(["poi_r20","poi_r7","poi_r1",...baseBuildingLayers])].forEach(layerId=>{
       if (map.getLayer(layerId)) map.setLayoutProperty(layerId,"visibility","none");
     });
     map.addSource("campus-buildings",{type:"geojson",data:buildingGeoJSON,promoteId:"id"});
-    map.addLayer({
-      id:"campus-buildings-shadow",type:"fill-extrusion",source:"campus-buildings",
-      paint:{"fill-extrusion-color":"#0b1830","fill-extrusion-height":["get","height"],"fill-extrusion-base":0,"fill-extrusion-opacity":0.28,"fill-extrusion-translate":[7,10]},
-    });
     map.addLayer({
       id:"campus-buildings",type:"fill-extrusion",source:"campus-buildings",
       paint:{
         "fill-extrusion-color":["case",
           ["==",["get","id"],"link"],"#8fdcc8",
-          ["boolean",["feature-state","selected"],false],"#14c996",
-          ["boolean",["feature-state","hovered"],false],"#4e91f0",
-          "#7899bd"],
+          ["==",["get","id"],"checkpoint-building"],"#173a63",
+          ["boolean",["feature-state","selected"],false],"#11b984",
+          ["boolean",["feature-state","hovered"],false],"#3b8eea",
+          "#5f83aa"],
         "fill-extrusion-height":["+",["get","height"],["case",["boolean",["feature-state","selected"],false],4,["boolean",["feature-state","hovered"],false],2,0]],
         "fill-extrusion-base":0,
-        "fill-extrusion-opacity":.94,
+        "fill-extrusion-opacity":1,
+        "fill-extrusion-vertical-gradient":true,
       },
     });
     map.addLayer({
       id:"campus-outline",type:"line",source:"campus-buildings",
       paint:{
-        "line-color":["case",["boolean",["feature-state","selected"],false],"#05775a",["boolean",["feature-state","hovered"],false],"#145db8","#ffffff"],
-        "line-width":["case",["boolean",["feature-state","selected"],false],5,["boolean",["feature-state","hovered"],false],3,1.5],
+        "line-color":["case",["==",["get","id"],"checkpoint-building"],"#ffffff",["boolean",["feature-state","selected"],false],"#05775a",["boolean",["feature-state","hovered"],false],"#145db8","#eaf3fb"],
+        "line-width":["case",["boolean",["feature-state","selected"],false],4,["boolean",["feature-state","hovered"],false],3,1.5],
         "line-opacity":1,
       },
     });
     map.addLayer({
       id:"campus-labels",type:"symbol",source:"campus-buildings",
-      filter:["!=",["get","id"],"link"],
+      filter:["match",["get","id"],["c1","c2","c3"],true,false],
       layout:{"text-field":["get","name"],"text-size":14,"text-font":["Noto Sans Regular"],"text-offset":[0,-1.1]},
       paint:{"text-color":["case",["boolean",["feature-state","selected"],false],"#05775a","#0b1d38"],"text-halo-color":"#ffffff","text-halo-width":2.5},
     });
     map.on("mousemove","campus-buildings",event => {
       const id=event.features?.[0]?.properties?.id;
-      map.getCanvas().style.cursor=id&&id!=="link"?"pointer":"";
+      const interactive=["c1","c2","c3"].includes(id);
+      map.getCanvas().style.cursor=interactive?"pointer":"";
       if (hoveredId && hoveredId!==id) map.setFeatureState({source:"campus-buildings",id:hoveredId},{hovered:false});
-      hoveredId=id&&id!=="link"?id:null;
+      hoveredId=interactive?id:null;
       if (hoveredId) map.setFeatureState({source:"campus-buildings",id:hoveredId},{hovered:true});
     });
     map.on("mouseleave","campus-buildings",() => {
@@ -83,7 +85,7 @@ export async function createCampusMap(container,onBuildingSelect,onCheckpointSel
     });
     map.on("click","campus-buildings",event => {
       const feature = event.features?.[0];
-      if (feature?.properties?.id && feature.properties.id !== "link") onBuildingSelect(feature.properties.id);
+      if (["c1","c2","c3"].includes(feature?.properties?.id)) onBuildingSelect(feature.properties.id);
     });
     if (selectedId) map.setFeatureState({source:"campus-buildings",id:selectedId},{selected:true});
   });
