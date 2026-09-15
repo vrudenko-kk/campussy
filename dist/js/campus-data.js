@@ -164,12 +164,14 @@ export const sharedFacilities = [
 ];
 
 export const allSearchable = [...locations,...sharedFacilities];
+const locationsById=new Map(allSearchable.map(location=>[location.id,location]));
+const areasById=new Map(floorAreas.map(area=>[area.id,area]));
 
-export function buildingById(id) { return floorAreas.find(building => building.id === id); }
+export function buildingById(id) { return areasById.get(id); }
 export function locationsOnFloor(buildingId,floor) {
-  return [...locations,...sharedFacilities].filter(location => location.buildingId === buildingId && location.floor === Number(floor));
+  return allSearchable.filter(location => location.buildingId === buildingId && location.floor === Number(floor));
 }
-export function locationById(id) { return allSearchable.find(location => location.id === id); }
+export function locationById(id) { return locationsById.get(id); }
 
 const planCache=new Map();
 export function getFloorPlan(buildingId,floor) {

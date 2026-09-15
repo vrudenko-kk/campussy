@@ -83,3 +83,15 @@ test("lift to 8th floor and invalid route states",()=>{
   assert.equal(route("3801","3803").status,"unverified");
   assert.equal(buildRoute(null,locationById("3801")).status,"empty");
 });
+
+test("transfers retain the correct approach and departure geometry in both directions",()=>{
+  for(const [a,b]of [["checkpoint","3805"],["3805","checkpoint"],["3310","2421"],["2421","3310"],["1202","3303"]]){
+    const result=route(a,b);assert.equal(result.status,"ready");
+    for(const stage of result.stages.filter(s=>s.kind==="vertical"||s.kind==="transition")){
+      assert.deepEqual(stage.approachPoints.at(-1),stage.fromPoint);
+      assert.deepEqual(stage.departurePoints[0],stage.toPoint);
+      assert.ok(getFloorPlan(stage.fromBuildingId,stage.fromFloor));
+      assert.ok(getFloorPlan(stage.toBuildingId,stage.toFloor));
+    }
+  }
+});

@@ -1,4 +1,4 @@
-import { getFloorPlan, locationById } from "./campus-data.js";
+import { getFloorPlan, locationById, buildingById } from "./campus-data.js";
 
 const NS="http://www.w3.org/2000/svg";
 const svgNode=(tag,attributes={})=>{
@@ -26,9 +26,16 @@ function marker(svg,point,label,type){
   svg.append(svgNode("circle",{cx:point[0],cy:point[1],r:16,class:"plan-marker "+type}),text(label,point[0],point[1]+6,"plan-marker-label"));
 }
 function drawRoute(svg,points){
-  if(points?.length<2)return;
+  if(!points?.length)return;
+  if(points.length===1){marker(svg,points[0],"А","start");return;}
   const d=roundedPath(points);
   svg.append(svgNode("path",{d,class:"plan-route-halo"}),svgNode("path",{d,class:"plan-route"}));
+  for(let i=1;i<points.length;i++){
+    const a=points[i-1],b=points[i],length=Math.hypot(b[0]-a[0],b[1]-a[1]);
+    if(length<95)continue;
+    const angle=Math.atan2(b[1]-a[1],b[0]-a[0])*180/Math.PI;
+    svg.append(svgNode("path",{d:"M -9 -8 L 8 0 L -9 8 Z",transform:`translate(${(a[0]+b[0])/2} ${(a[1]+b[1])/2}) rotate(${angle})`,class:"plan-direction"}));
+  }
   marker(svg,points[0],"А","start");marker(svg,points.at(-1),"Б","finish");
 }
 function interactive(group,location,onLocationClick){
@@ -45,6 +52,7 @@ function stairs(svg,rect){
 function outdoor(svg,stage){
   svg.setAttribute("viewBox","0 0 1000 800");
   svg.append(svgNode("rect",{x:20,y:20,width:960,height:760,rx:22,class:"plan-ground"}));
+  svg.append(svgNode("path",{d:"M 160 85 H 50 V 755 H 950 V 85 H 250",class:"plan-fence"}));
   svg.append(svgNode("rect",{x:25,y:25,width:950,height:35,class:"outdoor-road"}),text("4-й Вешняковский проезд",600,50,"plan-caption"));
   svg.append(svgNode("rect",{x:140,y:65,width:100,height:65,rx:5,class:"plan-building"}),text("КПП",290,103));
   svg.append(svgNode("rect",{x:270,y:220,width:460,height:70,rx:4,class:"plan-entry"}),text("Главный вход",500,256));
@@ -55,6 +63,24 @@ function outdoor(svg,stage){
   drawRoute(svg,stage.points);
 }
 
+function transferMap(svg,options){
+  const {stage}=options;
+  svg.setAttribute("viewBox","0 0 1200 1450");
+  const panels=[{area:stage.fromBuildingId,floor:stage.fromFloor,points:stage.approachPoints,y:0,label:"Откуда"},{area:stage.toBuildingId,floor:stage.toFloor,points:stage.departurePoints,y:820,label:"Куда"}];
+  for(const panel of panels){
+    svg.append(svgNode("rect",{x:10,y:panel.y+10,width:1180,height:610,rx:24,class:"transfer-panel"}));
+    const heading=svgNode("text",{x:40,y:panel.y+60,class:"transfer-heading"});
+    heading.textContent=`${panel.label} · ${buildingById(panel.area).name} · ${panel.floor} этаж`;svg.append(heading);
+    const map=svgNode("svg",{x:25,y:panel.y+80,width:1150,height:515});
+    renderFloorMap(map,{...options,buildingId:panel.area,floor:panel.floor,stage:{kind:"floor",points:panel.points}});
+    svg.append(map);
+  }
+  svg.append(svgNode("path",{d:"M 600 645 V 792 M 583 775 L 600 795 L 617 775",class:"transfer-link"}));
+  const label=stage.kind==="vertical"?(stage.transport==="lift"?"Лифт":"Лестница"):stage.title;
+  svg.append(text(label,330,710,"transfer-copy"));
+  svg.append(text(stage.fromFloor+" → "+stage.toFloor+" этаж",870,710,"transfer-copy"));
+}
+
 export function renderFloorMap(svg,{buildingId,floor,destinationId,originId,onLocationClick,stage}){
   svg.replaceChildren();
   svg.setAttribute("preserveAspectRatio","xMidYMid meet");
@@ -62,6 +88,10 @@ export function renderFloorMap(svg,{buildingId,floor,destinationId,originId,onLo
   const title=svgNode("title");title.textContent=stage?.kind==="outdoor"?"Путь по территории кампуса":"План "+floor+"-го этажа";
   svg.append(title);
   if(stage?.kind==="outdoor"){outdoor(svg,stage);return;}
+  if(stage?.kind==="vertical"||stage?.kind==="transition"){
+    title.textContent=stage.title;
+    transferMap(svg,{buildingId,floor,destinationId,originId,onLocationClick,stage});return;
+  }
   const plan=getFloorPlan(buildingId,floor);
   svg.setAttribute("viewBox","0 0 "+plan.width+" "+plan.height);
   svg.setAttribute("data-plan",buildingId+":"+floor);

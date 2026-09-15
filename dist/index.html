@@ -15,8 +15,7 @@
   <body>
     <header class="app-header">
       <button class="brand" type="button" id="brand-home" aria-label="Вернуться к карте кампуса">
-        <span class="brand-mark" aria-hidden="true">Ф</span>
-        <span><strong>Финансовый университет</strong><small>Навигация по кампусу</small></span>
+        <picture><source media="(min-width: 761px)" srcset="assets/university-logo.svg" /><img class="brand-logo" src="assets/university-mark.svg" width="42" height="44" alt="Финансовый университет" /></picture>
       </button>
       <div class="search-shell" role="search">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.4-4.4m2.4-5.1a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z"/></svg>
@@ -54,24 +53,10 @@
           </div>
           <div class="current-step-card">
             <span class="current-step-icon" id="current-step-icon" aria-hidden="true">↑</span>
-            <div><small id="current-step-index"></small><strong id="current-step-title"></strong><p id="current-step-detail"></p></div>
+            <div><small id="current-step-index"></small><strong id="current-step-title"></strong></div>
           </div>
-          <div class="current-stage-visual" id="current-stage-visual"></div>
-          <div class="route-step-controls">
-            <button type="button" id="route-prev">← Назад</button>
-            <span id="journey-meta"></span>
-            <button type="button" id="route-next">Далее →</button>
-          </div>
-          <details class="route-details" id="route-details">
-            <summary><span id="route-details-label">Показать весь маршрут</span><i aria-hidden="true">⌄</i></summary>
-            <div class="journey-endpoints" aria-label="Начальная и конечная точки маршрута">
-              <div class="journey-endpoint is-origin"><span class="endpoint-marker">A</span><span><small>Откуда</small><strong id="journey-origin-name"></strong><em id="journey-origin-meta"></em></span></div>
-              <span class="endpoint-arrow" aria-hidden="true">→</span>
-              <div class="journey-endpoint is-destination"><span class="endpoint-marker">Б</span><span><small>Куда</small><strong id="journey-destination-name"></strong><em id="journey-destination-meta"></em></span></div>
-            </div>
-            <div class="journey-cards" id="journey-cards"></div>
-            <div class="journey-instructions"><h3>Подробно по шагам</h3><ol id="journey-steps"></ol></div>
-          </details>
+          <progress id="route-progress" max="1" value="0" aria-label="Прогресс маршрута"></progress>
+
         </section>
         <div class="floor-layout">
           <section class="floor-canvas-card" aria-label="Схема этажа">
@@ -89,8 +74,28 @@
             <div class="data-note"><span>i</span><p id="plan-source"></p></div>
           </section>
         </div>
+        <footer class="route-dock" id="route-dock" hidden>
+          <div class="route-step-controls">
+            <button type="button" id="route-prev" aria-label="Предыдущий шаг">← Назад</button>
+            <span id="journey-meta"></span>
+            <button type="button" id="route-next">Далее →</button>
+          </div>
+<button id="route-details-toggle" type="button">Весь маршрут и подробности</button>
+        </footer>
       </section>
     </main>
+    <dialog class="route-overview" id="route-details" aria-labelledby="route-overview-title">
+      <header><h2 id="route-overview-title">Весь маршрут</h2><button id="route-details-close" type="button" aria-label="Закрыть подробности">×</button></header>
+      <p id="current-step-detail"></p>
+            <div class="journey-endpoints" aria-label="Начальная и конечная точки маршрута">
+              <div class="journey-endpoint is-origin"><span class="endpoint-marker">A</span><span><small>Откуда</small><strong id="journey-origin-name"></strong><em id="journey-origin-meta"></em></span></div>
+              <span class="endpoint-arrow" aria-hidden="true">→</span>
+              <div class="journey-endpoint is-destination"><span class="endpoint-marker">Б</span><span><small>Куда</small><strong id="journey-destination-name"></strong><em id="journey-destination-meta"></em></span></div>
+            </div>
+            <div class="journey-cards" id="journey-cards"></div>
+            <div class="journey-instructions"><h3>Подробно по шагам</h3><ol id="journey-steps"></ol></div>
+
+<p id="route-source-note"></p></dialog>
 
     <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
 

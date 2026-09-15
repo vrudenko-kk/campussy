@@ -1,5 +1,12 @@
 import { buildingGeoJSON } from "./campus-data.js";
 
+// Schematic perimeter; not a cadastral boundary. The gap is beside the checkpoint.
+const fencePoints=[[37.79504,55.71879],[37.79467,55.71782],[37.79599,55.71759],[37.79650,55.71850],[37.79526,55.71883]];
+const fenceData={type:"FeatureCollection",features:fencePoints.slice(1).map((b,i)=>{
+  const a=fencePoints[i],dx=b[0]-a[0],dy=b[1]-a[1],length=Math.hypot(dx,dy),nx=-dy/length*.000003,ny=dx/length*.000002;
+  return {type:"Feature",properties:{},geometry:{type:"Polygon",coordinates:[[[a[0]+nx,a[1]+ny],[b[0]+nx,b[1]+ny],[b[0]-nx,b[1]-ny],[a[0]-nx,a[1]-ny],[a[0]+nx,a[1]+ny]]]}};
+})};
+
 const buildingViews = {
   c1:{bearing:82,zoom:18.45,pitch:58},
   c2:{bearing:-98,zoom:18.45,pitch:58},
@@ -41,6 +48,8 @@ export async function createCampusMap(container,onBuildingSelect,onCheckpointSel
     [...new Set(["poi_r20","poi_r7","poi_r1",...baseBuildingLayers])].forEach(layerId=>{
       if (map.getLayer(layerId)) map.setLayoutProperty(layerId,"visibility","none");
     });
+    map.addSource("campus-fence",{type:"geojson",data:fenceData});
+    map.addLayer({id:"campus-fence",type:"fill-extrusion",source:"campus-fence",paint:{"fill-extrusion-color":"#687d8c","fill-extrusion-height":1.6,"fill-extrusion-base":0,"fill-extrusion-opacity":1}});
     map.addSource("campus-buildings",{type:"geojson",data:buildingGeoJSON,promoteId:"id"});
     map.addLayer({
       id:"campus-buildings",type:"fill-extrusion",source:"campus-buildings",

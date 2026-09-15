@@ -44,10 +44,8 @@ function normalize(value) {
   return String(value??"").toLocaleLowerCase("ru-RU").replaceAll("ё","е").trim();
 }
 
-function matches(query,location) {
-  const haystack=normalize(`${location.id} ${location.name} ${location.aliases??""} ${location.note??""} ${location.zone??""}`);
-  return haystack.includes(normalize(query));
-}
+const searchIndex=new Map(allSearchable.map(location=>[location.id,normalize(`${location.id} ${location.name} ${location.aliases??""} ${location.note??""} ${location.zone??""}`)]));
+function matches(query,location) { return searchIndex.get(location.id)?.includes(normalize(query))??false; }
 
 function stageWord(count) {
   const lastTwo=count%100; const last=count%10;
@@ -170,7 +168,7 @@ function renderFloorControls() {
 function renderFloor({center=true}={}) {
   const activeStage=state.route?.stages?.[state.activeStage];
   renderFloorControls();
-  $("#floor-map-title").textContent=activeStage?.kind==="outdoor"?"Путь по кампусу":"План этажа";
+  $("#floor-map-title").textContent=activeStage?.title??"План этажа";
   $("#plan-source").textContent=activeStage?.kind==="outdoor"?"Схема пути: КПП → главный вход → внутренний двор → корпус 3":getFloorPlan(state.buildingId,state.floor).source;
   $("#floor-map-subtitle").textContent=activeStage?.kind==="outdoor"?"Главный вход — отдельный общий блок":"Нажмите на помещение · + для увеличения";
   renderFloorMap(floorSvg,{
@@ -191,6 +189,7 @@ function setMapZoom(value) {
 
 function clearRoute() {
   state.route=null;state.activeStage=0;routeJourney.hidden=true;
+  document.body.classList.remove("route-active"); $("#route-dock").hidden=true;routeDetails.close();
   $("#next-step-card").hidden=true;floorView.classList.remove("is-route-mode");
 }
 
@@ -337,9 +336,10 @@ function renderCurrentStage() {
   $("#current-step-detail").textContent=stage.detail??stage.title;
   const stageIcon=current=>current.kind==="vertical"?(current.toFloor>current.fromFloor?"↑":"↓"):current.kind==="transition"?"⇄":current.kind==="outdoor"?"⌖":"→";
   $("#current-step-icon").textContent=stageIcon(stage);
-  const visual=$("#current-stage-visual"); visual.className=`current-stage-visual is-${stage.kind}`; visual.innerHTML=stageVisualMarkup(stage);
-  $("#route-prev").disabled=state.activeStage===0; $("#route-next").disabled=state.activeStage===stages.length-1;
-  $("#route-next").textContent=state.activeStage===stages.length-1?"Вы на месте":"Далее →";
+  $("#route-progress").max=stages.length; $("#route-progress").value=state.activeStage+1;
+  $("#route-source-note").textContent=$("#plan-source").textContent;
+  $("#route-prev").disabled=state.activeStage===0; $("#route-next").disabled=false;
+  $("#route-next").textContent=state.activeStage===stages.length-1?"Завершить":"Далее →";
   const next=stages[state.activeStage+1]; const nextCard=$("#next-step-card");
   nextCard.hidden=!next;
   if (next) {
@@ -355,17 +355,17 @@ function renderCurrentStage() {
 
 function showRouteStage(stage,index,{scroll=true}={}) {
   if (!stage) return;
-  routeDetails.open=false;
+  routeDetails.close();
   state.activeStage=index; state.view="floor"; state.buildingId=stage.buildingId; state.floor=Number(stage.floor);
   campusView.hidden=true; floorView.hidden=false; renderFloor(); renderCurrentStage();
-  if (scroll) routeJourney.scrollIntoView({behavior:"smooth",block:"start"});
+  if (scroll) floorCanvas.scrollTo({top:0,left:0,behavior:"instant"});
 }
 
 function renderJourney() {
   journeyCards.replaceChildren(); journeySteps.replaceChildren();
   const stages=state.route?.stages??[];
   if (state.route?.status!=="ready"||!stages.length) { routeJourney.hidden=true; $("#next-step-card").hidden=true; floorView.classList.remove("is-route-mode"); return; }
-  floorView.classList.add("is-route-mode"); routeDetails.open=false; $("#route-details-label").textContent="Показать весь маршрут";
+  floorView.classList.add("is-route-mode"); document.body.classList.add("route-active"); $("#route-dock").hidden=false; routeDetails.close();
   $("#route-journey-title").textContent=`Маршрут: ${state.destination.name}`;
   $("#journey-meta").textContent=`${stages.length} ${stageWord(stages.length)} · ~${state.route.estimatedMinutes} мин`;
   $("#journey-origin-name").textContent=state.origin.name; $("#journey-origin-meta").textContent=metaFor(state.origin);
@@ -399,7 +399,8 @@ function renderRouteResult() {
     state.activeStage=0; const first=state.route.stages[0];
     state.view="floor"; state.buildingId=first.buildingId; state.floor=Number(first.floor);
     campusView.hidden=true; floorView.hidden=false; renderFloor(); renderJourney(); closeRouteSheet();
-    requestAnimationFrame(()=>routeJourney.scrollIntoView({behavior:"smooth",block:"start"}));
+    search.blur(); originInput.blur(); searchResults.hidden=true;
+    window.scrollTo({top:0,behavior:"instant"});
   } else {
     renderJourney();
     if(state.view==="floor")renderFloor();
@@ -475,14 +476,15 @@ async function init() {
     if (event.key==="ArrowUp") { event.preventDefault(); (index<=0?originInput:buttons[index-1])?.focus(); }
     if (event.key==="Escape") { setOriginPickerOpen(false); originInput.focus(); }
   });
-  routeDetails.addEventListener("toggle",()=>{ $("#route-details-label").textContent=routeDetails.open?"Скрыть подробности":"Показать весь маршрут"; });
+  $("#route-details-toggle").addEventListener("click",()=>routeDetails.showModal());
+  $("#route-details-close").addEventListener("click",()=>routeDetails.close());
   document.addEventListener("click",event=>{ if(!event.target.closest(".search-shell")) searchResults.hidden=true; });
   document.addEventListener("click",event=>{ if(!event.target.closest(".origin-combobox")) setOriginPickerOpen(false); });
   $("#back-to-campus").addEventListener("click",showCampus); $("#brand-home").addEventListener("click",showCampus);
   $("#route-exit").addEventListener("click",showCampus);
   $("#route-build").addEventListener("click",buildSelectedRoute); $("#route-close").addEventListener("click",closeRouteSheet);
   $("#route-edit").addEventListener("click",openRouteEditor); $("#route-prev").addEventListener("click",()=>showRouteStage(state.route?.stages?.[state.activeStage-1],state.activeStage-1));
-  $("#route-next").addEventListener("click",()=>showRouteStage(state.route?.stages?.[state.activeStage+1],state.activeStage+1));
+  $("#route-next").addEventListener("click",()=>{if(state.activeStage===state.route.stages.length-1)showCampus();else showRouteStage(state.route.stages[state.activeStage+1],state.activeStage+1);});
   $("#next-step-card").addEventListener("click",()=>showRouteStage(state.route.stages[state.activeStage+1],state.activeStage+1));
   document.addEventListener("keydown",event=>{if(event.key==="Escape"){closeLocationSheet();closeRouteSheet();}});
   $("#location-close").addEventListener("click",closeLocationSheet);

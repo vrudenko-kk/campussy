@@ -82,7 +82,7 @@ function stagesFor(path,origin,destination){
     if(groupable){previous.edges.push(edge);previous.to=to;}
     else groups.push({kind:edge.kind,buildingId:from.buildingId,floor:from.floor,side:edge.side,transport:edge.transport,from,to,edges:[edge]});
   }
-  return groups.map((group,index)=>{
+  const stages=groups.map((group,index)=>{
     const {from,to,kind}=group;
     if(kind==="outdoor"){
       const checkpoint=group.edges.some(e=>e.from==="checkpoint"||e.to==="checkpoint");
@@ -91,10 +91,10 @@ function stagesFor(path,origin,destination){
       return {kind,buildingId:"entry",floor:1,title:"Территория кампуса",summary,detail:checkpoint?"Главный вход находится в общем блоке между корпусами 1 и 2.":"Пройдите прямо через внутренний двор. Вход в корпус 3 находится на 1-м этаже.",points:clean(group.edges.flatMap(e=>e.points)),fromLabel:checkpoint?(forward?"КПП":"Вход"):(forward?"Вход":"Корпус 3"),toLabel:checkpoint?(forward?"Вход":"КПП"):(forward?"Корпус 3":"Вход")};
     }
     const area=buildingById(to.buildingId);
-    if(kind==="vertical")return {kind,transport:group.transport??"stairs",buildingId:to.buildingId,floor:to.floor,fromFloor:from.floor,toFloor:to.floor,title:area.name+" · "+from.floor+" → "+to.floor+" этаж",summary:(to.floor>from.floor?"Поднимитесь":"Спуститесь")+(group.transport==="lift"?" на лифте":" по лестнице")+" на "+to.floor+"-й этаж",detail:area.name+", "+(group.side==="west"?"левая":"правая")+(group.transport==="lift"?" группа лифтов.":" лестница.")+" С "+from.floor+"-го на "+to.floor+"-й этаж.",connectorPoint:to.point,points:[]};
+    if(kind==="vertical")return {kind,transport:group.transport??"stairs",buildingId:to.buildingId,floor:to.floor,fromFloor:from.floor,toFloor:to.floor,title:area.name+" · "+from.floor+" → "+to.floor+" этаж",summary:(to.floor>from.floor?"Поднимитесь":"Спуститесь")+(group.transport==="lift"?" на лифте":" по лестнице")+" на "+to.floor+"-й этаж",detail:area.name+", "+(group.side==="west"?"левая":"правая")+(group.transport==="lift"?" группа лифтов.":" лестница.")+" С "+from.floor+"-го на "+to.floor+"-й этаж.",fromBuildingId:from.buildingId,toBuildingId:to.buildingId,fromPoint:from.point,toPoint:to.point,connectorPoint:to.point,points:[]};
     if(kind==="transition"){
       const transition=group.edges[0].transition;
-      return {kind,buildingId:to.buildingId,floor:to.floor,fromBuildingId:from.buildingId,fromFloor:from.floor,toBuildingId:to.buildingId,toFloor:to.floor,title:transition?.name??"Общий входной блок",summary:buildingById(from.buildingId).name+", "+from.floor+" → "+area.name+", "+to.floor,detail:transition?.id==="c1-c3-cofix"?"Пройдите через переход у Coffix на 2-м этаже.":transition?"Переход соединяет 4-й этаж корпуса 2 с 3-м этажом корпуса 3.":"Пройдите через общий входной блок между корпусами 1 и 2.",connectorPoint:to.point,points:[]};
+      return {kind,buildingId:to.buildingId,floor:to.floor,fromBuildingId:from.buildingId,fromFloor:from.floor,toBuildingId:to.buildingId,toFloor:to.floor,title:transition?.name??"Общий входной блок",summary:buildingById(from.buildingId).name+", "+from.floor+" → "+area.name+", "+to.floor,detail:transition?.id==="c1-c3-cofix"?"Пройдите через переход у Coffix на 2-м этаже.":transition?"Переход соединяет 4-й этаж корпуса 2 с 3-м этажом корпуса 3.":"Пройдите через общий входной блок между корпусами 1 и 2.",fromPoint:from.point,toPoint:to.point,connectorPoint:to.point,points:[]};
     }
     const final=index===groups.length-1,first=index===0;
     const points=clean([from.point,...group.edges.map(e=>nodes.get(e.to).point)]);
@@ -104,6 +104,13 @@ function stagesFor(path,origin,destination){
     const detail=final?"Следуйте по линии до «"+destination.name+"».":from.buildingId==="c3"&&from.floor===1?"В холле гардероб находится прямо, по две кабины лифта — слева и справа. Лестница — сразу слева от входа.":from.buildingId==="entry"?"Главный вход находится в общем блоке между корпусами 1 и 2.":"Следуйте по коридору через отмеченные дверные проёмы.";
     return {kind,buildingId:from.buildingId,floor:from.floor,title:buildingById(from.buildingId).name+" · "+from.floor+"-й этаж",summary,detail,role:first&&final?"complete":first?"start":final?"finish":"intermediate",points};
   });
+  stages.forEach((stage,index)=>{
+    if(stage.kind!=="vertical"&&stage.kind!=="transition")return;
+    const before=stages[index-1],after=stages[index+1];
+    stage.approachPoints=before?.kind==="floor"&&before.buildingId===stage.fromBuildingId&&before.floor===stage.fromFloor?before.points:[stage.fromPoint];
+    stage.departurePoints=after?.kind==="floor"&&after.buildingId===stage.toBuildingId&&after.floor===stage.toFloor?after.points:[stage.toPoint];
+  });
+  return stages;
 }
 
 export function buildRoute(origin,destination){
