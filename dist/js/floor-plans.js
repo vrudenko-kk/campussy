@@ -50,22 +50,69 @@ export const surveyedPlans={
   },
 };
 
+// The annotated floor-2 plan is shared by floors 2, 3, 4, 5, 7 and 9.
+// Its long northern volume and five southern rooms differ from floors 6/8.
+function typicalC3Plan(floor){
+  const id=n=>`3${floor}${String(n).padStart(2,"0")}`;
+  const equipment=(kind,side)=>`${kind}-c3-${floor}-${side}`;
+  const plan={
+    width:1200,height:1000,
+    source:`По плану эвакуации 2-го этажа корпуса 3${floor===2?"":` · шаблон для ${floor}-го этажа по указанию команды`} · размеры приблизительные`,
+    outline:[[35,310],[170,310],[170,225],[200,225],[200,30],[1000,30],[1000,225],[1030,225],[1030,310],[1165,310],[1165,915],[955,915],[660,965],[540,965],[250,925],[35,925]],
+    nodes:{west:[65,580],wcw:[200,580],wcwa:[200,480],sw:[200,320],lw:[390,580],lw1:[390,430],lw2:[390,495],r10:[470,580],hall:[600,580],r11:[740,580],le:[810,580],le1:[810,430],le2:[810,495],r05:[930,580],wce:[1000,580],wcea:[1000,480],se:[1000,320],r06:[1100,580],east:[1135,580],hallSouth:[600,710],hallEnd:[600,915],westLower:[100,650],westBend:[100,580],bridgeW:[35,580],bridgeE:[1165,580]},
+    edges:[["bridgeW","west"],["west","westBend"],["westBend","wcw"],["wcw","lw"],["lw","r10"],["r10","hall"],["hall","r11"],["r11","le"],["le","r05"],["r05","wce"],["wce","r06"],["r06","east"],["east","bridgeE"],["wcw","wcwa"],["wcwa","sw"],["wce","wcea"],["wcea","se"],["lw","lw2"],["lw2","lw1"],["le","le2"],["le2","le1"],["hall","hallSouth"],["hallSouth","hallEnd"],["westBend","westLower"]],
+    corridors:[[[35,580],[1165,580]],[[200,580],[200,275],[230,275]],[[1000,580],[1000,275],[970,275]],[[390,580],[390,430]],[[810,580],[810,430]],[[600,580],[600,915]],[[100,580],[100,690]],[[530,710],[670,710]]],
+    rooms:[
+      rect(id(10),id(10),430,230,165,285,[470,515],"r10"),
+      rect(id(11),id(11),605,230,165,285,[740,515],"r11"),
+      rect(id(1),id(1),40,690,225,225,[100,690],"westLower"),
+      rect(id(2),id(2),275,640,255,275,[530,710],"hallSouth"),
+      rect(id(4),id(4),670,640,170,275,[670,710],"hallSouth"),
+      rect(id(5),id(5),850,640,155,275,[930,640],"r05"),
+      rect(id(6),id(6),1015,640,145,275,[1100,640],"r06"),
+      rect(equipment("wc","w"),"WC",40,330,120,180,[160,480],"wcwa","restroom"),
+      rect(equipment("wc","e"),"WC",1040,330,120,180,[1040,480],"wcea","restroom"),
+      rect(equipment("lift","w1"),"Л1",270,405,80,50,[350,430],"lw1","lift"),
+      rect(equipment("lift","w2"),"Л2",270,470,80,50,[350,495],"lw2","lift"),
+      rect(equipment("lift","e1"),"Л3",850,405,80,50,[850,430],"le1","lift"),
+      rect(equipment("lift","e2"),"Л4",850,470,80,50,[850,495],"le2","lift"),
+      rect(equipment("stairs","w"),"Лестница",230,230,180,140,[230,320],"sw","stairs"),
+      rect(equipment("stairs","e"),"Лестница",790,230,180,140,[970,320],"se","stairs"),
+    ],
+    connectors:{west:equipment("stairs","w"),east:equipment("stairs","e"),bridgeWest:"bridgeW",bridgeEast:"bridgeE"},
+    walls:[[[200,225],[430,225]],[[770,225],[1000,225]],[[210,65],[405,225]],[[990,65],[795,225]]],
+    windows:[[[205,30],[995,30]],[[275,925],[540,965]],[[660,965],[955,915]]],
+    captions:[{text:"Холл",point:[600,840]}],
+    passages:floor===2?[{point:[35,580],label:"В корпус 1 · 2 этаж",side:"left"}]:floor===3?[{point:[1165,580],label:"В корпус 2 · 4 этаж",side:"right"}]:floor===4?[{point:[35,580],label:"В корпус 1 · 5 этаж",side:"left"}]:[],
+  };
+  return plan;
+}
+for(const floor of [2,3,4,5,7,9])surveyedPlans[`c3:${floor}`]=typicalC3Plan(floor);
+const sixth=structuredClone(surveyedPlans["c3:8"]);
+const sixthId=id=>/^38\d{2}$/.test(id)?"36"+id.slice(2):id.replace("c3-8-","c3-6-");
+sixth.rooms=sixth.rooms.map(room=>({...room,id:sixthId(room.id),label:sixthId(room.label)}));
+sixth.connectors=Object.fromEntries(Object.entries(sixth.connectors).map(([key,id])=>[key,sixthId(id)]));
+sixth.source="6-й этаж · шаблон 8-го этажа по указанию команды · размеры приблизительные";
+surveyedPlans["c3:6"]=sixth;
+
 export function entryPlan(floor){
   const upper=Number(floor)===2;
   return {
     width:1000,height:640,source:"Общий входной блок между корпусами 1 и 2 · схема",
     outline:[[50,75],[950,75],[950,550],[600,550],[600,610],[400,610],[400,550],[50,550]],
     corridors:[[[130,330],[870,330]],[[500,150],[500,560]]],
-    nodes:{west:[130,330],hall:[500,330],east:[870,330],entrance:[500,560],courtyard:[500,150],food:[690,330]},
-    edges:[line("west","hall"),line("hall","food"),line("food","east"),line("hall","entrance"),line("hall","courtyard")],
+    nodes:{west:[130,330],hall:[500,330],east:[870,330],entrance:[500,560],courtyard:[500,150],food:[690,330],stairAccess:[350,330]},
+    edges:[line("west","stairAccess"),line("stairAccess","hall"),line("hall","food"),line("food","east"),line("hall","entrance"),line("hall","courtyard")],
     rooms:upper?[
       rect("canteen","Столовая",580,90,300,180,[690,270],"food","food"),
+      rect("stairs-entry-2","Лестница",280,380,140,100,[350,380],"stairAccess","stairs"),
     ]:[
       rect("main-entrance","Главный вход",405,520,190,85,[500,520],"hall","entrance"),
       rect("buffet","Буфет",580,90,300,180,[690,270],"food","food"),
+      rect("stairs-entry-1","Лестница",280,380,140,100,[350,380],"stairAccess","stairs"),
     ],
-    connectors:{west:"west",east:"east",entrance:"entrance",courtyard:"courtyard"},
-    captions:[{text:upper?"Лестница с 1-го этажа":"Во внутренний двор → корпус 3",point:[500,65]},{text:"Корпус 1",point:[130,410]},{text:"Корпус 2",point:[870,410]}],
+    connectors:{west:`stairs-entry-${upper?2:1}`,entrance:"entrance",courtyard:"courtyard",toC1:"east",toC2:"west"},
+    captions:[{text:upper?"Столовая · над главным входом":"Во внутренний двор → корпус 3",point:[500,65]},{text:"Корпус 2",point:[130,410]},{text:"Корпус 1",point:[870,410]}],
   };
 }
 

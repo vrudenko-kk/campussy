@@ -1,17 +1,18 @@
-import { allSearchable, buildingById, getFloorPlan, locationById } from "./campus-data.js?v=71548f074fc1";
-import { createCampusMap } from "./campus-map.js?v=71548f074fc1";
-import { renderFloorMap } from "./floor-map.js?v=71548f074fc1";
-import { buildRoute } from "./router.js?v=71548f074fc1";
-import { wingDirectory } from "./wing-directory.js?v=71548f074fc1";
+import { allSearchable, buildingById, getFloorPlan, locationById } from "./campus-data.js?v=a56ba11e977f";
+import { createCampusMap } from "./campus-map.js?v=a56ba11e977f";
+import { renderFloorMap } from "./floor-map.js?v=a56ba11e977f";
+import { buildRouteWithStreet } from "./street-router.js?v=a56ba11e977f";
+import { wingDirectory } from "./wing-directory.js?v=a56ba11e977f";
 
 const SEARCH_PLACEHOLDER="Аудитория, столовая, КПП…";
 const RECENT_KEY="campussy-recent-searches";
-const recommendationIds=["main-entrance","canteen","buffet","checkpoint","cofix","library","gym"];
-const recommendationIcons={"main-entrance":"Вход",canteen:"☕",buffet:"🥪",checkpoint:"КПП",cofix:"CF",library:"Б",gym:"СП"};
+const recommendationIds=["metro","main-entrance","entrance-c1","canteen","buffet","checkpoint","cofix","library","gym"];
+const recommendationIcons={metro:"М","entrance-c1":"1","main-entrance":"Вход",canteen:"☕",buffet:"🥪",checkpoint:"КПП",cofix:"CF",library:"Б",gym:"СП"};
 
 const state={
   view:"campus",buildingId:"c3",floor:3,destination:null,origin:null,route:null,mapController:null,
   selectedLocation:null,pendingOrigin:null,activeStage:0,buildingOpenTimer:null,zoom:1,
+  routeRequest:null,
 };
 
 const $=selector=>document.querySelector(selector);
@@ -36,7 +37,7 @@ const journeySteps=$("#journey-steps");
 const originLocations=allSearchable.filter(location=>location.verified&&(location.buildingId||location.graphNode));
 
 function metaFor(location) {
-  if (location.graphNode) return location.zone;
+  if (location.graphNode&&!location.buildingId) return location.zone;
   if (location.buildingId) return `${buildingById(location.buildingId).name} · ${location.floor}-й этаж`;
   return location.zone??"Общий объект кампуса";
 }
@@ -131,13 +132,12 @@ function selectBuilding(buildingId) {
   state.buildingId=buildingId;
   state.mapController?.select(buildingId);
   const building=buildingById(buildingId);
-  $("#map-orientation-label").textContent=`${building.name} · ориентация по схеме этажа`;
   state.buildingOpenTimer=window.setTimeout(()=>openFloor(buildingId,building.defaultFloor),430);
 }
 
 function updateFloorHeading() {
   const activeStage=state.route?.stages?.[state.activeStage];
-  if (activeStage?.kind==="outdoor") {
+  if (["outdoor","street"].includes(activeStage?.kind)) {
     $("#floor-building-name").textContent="Территория кампуса";
     $("#floor-title").textContent=activeStage.summary;
     return;
@@ -151,8 +151,8 @@ function renderFloorControls() {
   const building=buildingById(state.buildingId); updateFloorHeading();
   const buttons=$("#floor-buttons"); buttons.replaceChildren();
   const activeStage=state.route?.stages?.[state.activeStage];
-  buttons.hidden=activeStage?.kind==="outdoor";
-  if (activeStage?.kind==="outdoor") return;
+  buttons.hidden=["outdoor","street"].includes(activeStage?.kind);
+  if (buttons.hidden) return;
   building.floors.forEach(floor=>{
     const button=document.createElement("button"); button.type="button";
     button.className=`floor-tab${floor===state.floor?" is-active":""}`; button.textContent=String(floor);
@@ -170,7 +170,7 @@ function renderFloor({center=true}={}) {
   const activeStage=state.route?.stages?.[state.activeStage];
   renderFloorControls();
   $("#floor-map-title").textContent=activeStage?.title??"План этажа";
-  $("#plan-source").textContent=activeStage?.kind==="outdoor"?"Схема пути: КПП → главный вход → внутренний двор → корпус 3":getFloorPlan(state.buildingId,state.floor).source;
+  $("#plan-source").textContent=activeStage?.source??(activeStage?.kind==="outdoor"?"Схема территории кампуса · дорога вдоль корпуса 1":getFloorPlan(state.buildingId,state.floor).source);
   $("#floor-map-subtitle").textContent=activeStage?.kind==="outdoor"?"Главный вход — отдельный общий блок":"Нажмите на помещение · + для увеличения";
   renderFloorMap(floorSvg,{
     buildingId:state.buildingId,floor:state.floor,route:state.route,destinationId:state.destination?.id,
@@ -200,6 +200,8 @@ function setMapZoom(value) {
 }
 
 function clearRoute() {
+  state.routeRequest?.abort();state.routeRequest=null;
+  $("#route-build").disabled=false;$("#route-build").textContent="Построить маршрут";
   state.route=null;state.activeStage=0;routeJourney.hidden=true;
   document.body.classList.remove("route-active"); $("#route-dock").hidden=true;routeDetails.close();
   $("#next-step-card").hidden=true;floorView.classList.remove("is-route-mode");
@@ -220,7 +222,6 @@ function showCampus() {
   state.view="campus"; state.buildingId="c3"; state.floor=1;clearRoute();state.pendingOrigin=null;search.placeholder=SEARCH_PLACEHOLDER;
   campusView.hidden=false; floorView.hidden=true; floorView.classList.remove("is-route-mode"); routeJourney.hidden=true;
   closeRouteSheet(); closeLocationSheet();
-  $("#map-orientation-label").textContent="Вид на корпус 3 · направление на юг";
   requestAnimationFrame(()=>{ state.mapController?.resize(); state.mapController?.overview(); });
   window.scrollTo({top:0,behavior:"smooth"});
 }
@@ -282,6 +283,10 @@ function updateBackdrop() {
 }
 
 function openLocationActions(location,{navigate=false}={}) {
+  if(location.type==="lift"||location.type==="stairs"){
+    if(navigate&&location.buildingId)openFloor(location.buildingId,location.floor);
+    openFloorPicker(location);return;
+  }
   state.selectedLocation=location; rememberLocation(location);
   if (navigate&&location.buildingId&&location.floor) openFloor(location.buildingId,location.floor);
   $("#location-sheet-title").textContent=location.name;
@@ -294,6 +299,21 @@ function openLocationActions(location,{navigate=false}={}) {
   const unavailable=((!location.buildingId||!location.floor)&&!location.graphNode)||!location.verified;
   $("#route-from-location").disabled=unavailable; $("#route-to-location").disabled=unavailable;
   locationSheet.hidden=false; requestAnimationFrame(()=>locationSheet.classList.add("is-open")); updateBackdrop();
+}
+
+function openFloorPicker(location){
+  const dialog=$("#floor-picker"),options=$("#floor-picker-options");options.replaceChildren();
+  $("#floor-picker-meta").textContent=`${location.type==="lift"?"Лифт":"Лестница"} · ${buildingById(location.buildingId).name}`;
+  const side=location.id.match(/-([we][12]?)$/)?.[1];
+  for(const floor of buildingById(location.buildingId).floors){
+    const plan=getFloorPlan(location.buildingId,floor);
+    const served=plan.rooms.some(room=>room.type===location.type&&(!side||room.id.endsWith("-"+side)));
+    const button=document.createElement("button");button.type="button";button.textContent=`${floor} этаж`;
+    button.disabled=!served;button.setAttribute("aria-current",String(floor===state.floor));
+    if(!served)button.title="Эта группа не отмечена на плане";
+    button.addEventListener("click",()=>{dialog.close();openFloor(location.buildingId,floor);});options.append(button);
+  }
+  closeLocationSheet();searchResults.hidden=true;search.blur();dialog.showModal();
 }
 
 function closeLocationSheet() {
@@ -329,7 +349,7 @@ function beginRouteToSelected() {
 }
 
 function stageVisualMarkup(stage) {
-  if (stage.kind==="outdoor") {
+  if (["outdoor","street"].includes(stage.kind)) {
     const from=stage.fromLabel; const to=stage.toLabel;
     return `<span class="stage-node"><b>${from}</b><small>улица</small></span><i aria-hidden="true">→</i><span class="stage-node"><b>${to}</b><small>кампус</small></span>`;
   }
@@ -409,7 +429,7 @@ function renderJourney() {
 function renderRouteResult() {
   const result=$("#route-result"); result.hidden=false; routeSteps.replaceChildren();
   state.route.steps.forEach(step=>{ const item=document.createElement("li"); item.textContent=step; routeSteps.append(item); });
-  $("#route-result-title").textContent=state.route.status==="ready"?"Маршрут построен":state.route.status==="same"?"Вы уже на месте":"Нужна проверка данных";
+  $("#route-result-title").textContent=state.route.status==="ready"?"Маршрут построен":state.route.status==="same"?"Вы уже на месте":state.route.status==="street-unavailable"?"Маршрут к метро временно недоступен":"Нужна проверка данных";
   $("#route-result-meta").textContent=state.route.status==="ready"?`По схеме · примерно ${state.route.estimatedMinutes} мин`:"";
   if (state.route.status==="ready") {
     state.activeStage=0; const first=state.route.stages[0];
@@ -424,12 +444,21 @@ function renderRouteResult() {
   }
 }
 
-function startRoute(origin,destination) {
+async function startRoute(origin,destination) {
   window.clearTimeout(state.buildingOpenTimer);
-  clearRoute();state.origin=origin; state.destination=destination; state.route=buildRoute(origin,destination);
+  clearRoute();state.origin=origin; state.destination=destination;
+  const request=new AbortController();state.routeRequest=request;
+  $("#route-build").disabled=true;$("#route-build").textContent="Строим маршрут…";
+  if(origin.id==="metro"||destination.id==="metro")openRouteSheet();
   search.value=destination.name; search.placeholder=SEARCH_PLACEHOLDER;
   $("#destination-name").textContent=destination.name; $("#destination-meta").textContent=metaFor(destination);
-  originInput.value=origin.name; originInput.dataset.locationId=origin.id; renderRouteResult();
+  originInput.value=origin.name; originInput.dataset.locationId=origin.id;
+  try{
+    const route=await buildRouteWithStreet(origin,destination,{signal:request.signal});
+    if(request.signal.aborted||state.routeRequest!==request)return;
+    state.route=route;state.routeRequest=null;renderRouteResult();
+  }catch(error){if(!request.signal.aborted)throw error;}
+  finally{if(!state.routeRequest){$("#route-build").disabled=false;$("#route-build").textContent="Построить маршрут";}}
 }
 
 function buildSelectedRoute() {
@@ -444,9 +473,9 @@ function openRouteEditor() {
 
 function renderFallbackMap() {
   const map=$("#campus-map"); map.classList.add("map-fallback");
-  map.innerHTML='<div class="fallback-campus" aria-label="Схема кампуса"><button data-building="c1"><b>1</b><span>Корпус 1</span></button><button data-building="c3"><b>3</b><span>Корпус 3</span></button><button data-building="c2"><b>2</b><span>Корпус 2</span></button><button data-location="checkpoint"><b>КПП</b><span>Проходная</span></button></div>';
+  map.innerHTML='<div class="fallback-campus" aria-label="Схема кампуса"><button data-building="c1"><b>1</b><span>Корпус 1</span></button><button data-building="c3"><b>3</b><span>Корпус 3</span></button><button data-building="c2"><b>2</b><span>Корпус 2</span></button><button data-location="checkpoint"><b>КПП</b><span>Проходная</span></button><button data-location="metro"><b>М</b><span>Рязанский проспект</span></button><button data-building="entry"><b>Вход</b><span>Главный вход</span></button></div>';
   map.querySelectorAll("[data-building]").forEach(button=>button.addEventListener("click",()=>selectBuilding(button.dataset.building)));
-  map.querySelector("[data-location]")?.addEventListener("click",()=>openLocationActions(locationById("checkpoint"),{navigate:false}));
+  map.querySelectorAll("[data-location]").forEach(button=>button.addEventListener("click",()=>openLocationActions(locationById(button.dataset.location),{navigate:false})));
 }
 
 function registerWebMcp() {
@@ -460,15 +489,17 @@ function registerWebMcp() {
   register({
     name:"build_indoor_route",title:"Построить маршрут",description:"Выбрать начальную и конечную точки и показать маршрут в интерфейсе.",
     inputSchema:{type:"object",properties:{originId:{type:"string"},destinationId:{type:"string"}},required:["originId","destinationId"],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},
-    execute({originId,destinationId}) {
+    async execute({originId,destinationId}) {
       const origin=originLocations.find(item=>item.id===originId); const destination=locationById(destinationId);
-      if(!origin||!destination) throw new Error("Unknown originId or destinationId"); startRoute(origin,destination);
+      if(!origin||!destination) throw new Error("Unknown originId or destinationId"); await startRoute(origin,destination);
       return {status:state.route.status,kind:state.route.kind??null,estimatedMinutes:state.route.estimatedMinutes??null,steps:state.route.steps,stages:state.route.stages?.map(stage=>({kind:stage.kind,title:stage.title,summary:stage.summary}))??[]};
     },
   });
 }
 
 async function init() {
+  $("#floor-picker-close").addEventListener("click",()=>$("#floor-picker").close());
+  $("#floor-picker").addEventListener("click",event=>{if(event.target===$("#floor-picker")){const r=event.target.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)event.target.close();}});
   window.matchMedia("(max-width: 760px)").addEventListener("change",()=>{if(state.view==="floor")renderFloor();});
   $("#map-zoom-in").addEventListener("click",()=>setMapZoom(state.zoom+.5));
   $("#map-zoom-out").addEventListener("click",()=>setMapZoom(state.zoom-.5));

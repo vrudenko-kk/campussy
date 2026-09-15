@@ -1,4 +1,5 @@
-import { getFloorPlan, locationById, buildingById } from "./campus-data.js?v=71548f074fc1";
+import { getFloorPlan, locationById, buildingById, buildingGeoJSON } from "./campus-data.js?v=a56ba11e977f";
+import { campusOutdoor,metroPoint,roadCoordinates,streetGate } from "./outdoor-data.js?v=a56ba11e977f";
 
 const NS="http://www.w3.org/2000/svg";
 const svgNode=(tag,attributes={})=>{
@@ -41,7 +42,7 @@ function drawRoute(svg,points){
 function interactive(group,location,onLocationClick){
   if(!location||!onLocationClick)return;
   group.classList.add("floor-room-hotspot");group.setAttribute("role","button");group.setAttribute("tabindex","0");
-  group.setAttribute("aria-label",location.name+". Маршрут отсюда или сюда.");
+  group.setAttribute("aria-label",location.name+(["stairs","lift"].includes(location.type)?". Выберите этаж.":". Маршрут отсюда или сюда."));
   group.addEventListener("click",()=>onLocationClick(location));
   group.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();onLocationClick(location);}});
 }
@@ -52,8 +53,9 @@ function stairs(svg,rect){
 function outdoor(svg,stage){
   svg.setAttribute("viewBox","0 0 1000 800");
   svg.append(svgNode("rect",{x:20,y:20,width:960,height:760,rx:22,class:"plan-ground"}));
-  svg.append(svgNode("path",{d:"M 160 85 H 50 V 755 H 950 V 85 H 250",class:"plan-fence"}));
-  svg.append(svgNode("rect",{x:25,y:25,width:950,height:35,class:"outdoor-road"}),text("4-й Вешняковский проезд",600,50,"plan-caption"));
+  svg.append(svgNode("path",{d:"M "+campusOutdoor.fence.map(p=>p.join(" ")).join(" L "),class:"plan-fence"}));
+  svg.append(svgNode("rect",{x:35,y:25,width:50,height:750,rx:8,class:"outdoor-road"}));
+  const roadLabel=text("4-й Вешняковский проезд",58,450,"plan-caption");roadLabel.setAttribute("transform","rotate(-90 58 450)");svg.append(roadLabel);
   svg.append(svgNode("rect",{x:140,y:65,width:100,height:65,rx:5,class:"plan-building"}),text("КПП",290,103));
   svg.append(svgNode("rect",{x:270,y:220,width:460,height:70,rx:4,class:"plan-entry"}),text("Главный вход",500,256));
   svg.append(svgNode("rect",{x:160,y:280,width:120,height:370,class:"plan-building"}),text("1",220,480));
@@ -61,6 +63,26 @@ function outdoor(svg,stage){
   svg.append(svgNode("rect",{x:295,y:620,width:410,height:115,class:"plan-building"}),text("Корпус 3",500,690));
   svg.append(text("Внутренний двор",500,490,"plan-caption"),text("Вход · 1 этаж",500,604,"plan-caption"));
   drawRoute(svg,stage.points);
+}
+
+function streetMap(svg,stage){
+  svg.setAttribute("viewBox","0 0 1000 1100");
+  const rings=buildingGeoJSON.features.map(f=>f.geometry.coordinates[0]);
+  const coords=[...stage.geoPoints,...rings.flat(),metroPoint,streetGate];
+  const west=Math.min(...coords.map(p=>p[0])),east=Math.max(...coords.map(p=>p[0]));
+  const south=Math.min(...coords.map(p=>p[1])),north=Math.max(...coords.map(p=>p[1]));
+  const scale=Math.min(850/((east-west)*63700),850/((north-south)*111320));
+  const project=([lng,lat])=>[500+(lng-(west+east)/2)*63700*scale,530-(lat-(north+south)/2)*111320*scale];
+  svg.append(svgNode("rect",{x:10,y:10,width:980,height:1080,rx:24,class:"plan-ground"}));
+  svg.append(svgNode("path",{d:"M "+roadCoordinates.map(p=>project(p).join(" ")).join(" L "),class:"street-road"}));
+  buildingGeoJSON.features.forEach((f,i)=>{
+    const points=rings[i].map(project);svg.append(svgNode("polygon",{points:points.map(p=>p.join(",")).join(" "),class:f.properties.id==="entry"?"plan-entry":"plan-building"}));
+    const p=points.reduce((a,b)=>a.map((v,j)=>v+b[j]/points.length),[0,0]);
+    svg.append(text(f.properties.id.startsWith("c")&&f.properties.id.length===2?f.properties.id.slice(1):f.properties.id==="entry"?"Вход":"КПП",...p,"street-building-label"));
+  });
+  drawRoute(svg,stage.geoPoints.map(project));
+  const metro=project(metroPoint);svg.append(svgNode("circle",{cx:metro[0],cy:metro[1],r:22,class:"metro-dot"}),text("М",metro[0],metro[1]+1,"plan-marker-label"));
+  svg.append(text("Рязанский проспект · выход 1",500,1020,"plan-caption"),text(`${stage.meters} м · пешком`,500,1060,"plan-caption"),text("С ↑",925,65,"plan-caption"));
 }
 
 function transferMap(svg,options){
@@ -84,9 +106,10 @@ function transferMap(svg,options){
 export function renderFloorMap(svg,{buildingId,floor,destinationId,originId,onLocationClick,stage,embedded=false}){
   svg.replaceChildren();
   svg.setAttribute("preserveAspectRatio","xMidYMid meet");
-  svg.classList.toggle("is-outdoor-map",stage?.kind==="outdoor");
+  svg.classList.toggle("is-outdoor-map",["outdoor","street"].includes(stage?.kind));
   const title=svgNode("title");title.textContent=stage?.kind==="outdoor"?"Путь по территории кампуса":"План "+floor+"-го этажа";
   svg.append(title);
+  if(stage?.kind==="street"){title.textContent="Пешеходный маршрут от метро до кампуса";streetMap(svg,stage);return;}
   if(stage?.kind==="outdoor"){outdoor(svg,stage);return;}
   if(stage?.kind==="vertical"||stage?.kind==="transition"){
     title.textContent=stage.title;
@@ -130,6 +153,11 @@ export function renderFloorMap(svg,{buildingId,floor,destinationId,originId,onLo
   for(const points of plan.walls??[])content.append(svgNode("path",{d:"M "+points.map(p=>p.join(" ")).join(" L "),class:"plan-partition"}));
   for(const points of plan.stepLines??[])content.append(svgNode("path",{d:"M "+points.map(p=>p.join(" ")).join(" L "),class:"plan-stair-line"}));
   for(const points of plan.windows??[])content.append(svgNode("path",{d:"M "+points.map(p=>p.join(" ")).join(" L "),class:"plan-window"}));
+  for(const passage of plan.passages??[]){
+    const [x,y]=passage.point;
+    content.append(svgNode("path",{d:`M ${x} ${y-22} V ${y+22}`,class:"plan-door"}));
+    const label=text((passage.side==="left"?"← ":"")+passage.label+(passage.side==="right"?" →":""),passage.side==="left"?180:1020,y+42,"passage-label");content.append(label);
+  }
   if(!portrait)for(const caption of plan.captions??[])content.append(text(caption.text,...caption.point,"plan-caption"));
   if(stage?.kind==="floor")drawRoute(content,stage.points);
   if(stage?.connectorPoint)marker(content,stage.connectorPoint,stage.kind==="vertical"?(stage.toFloor>stage.fromFloor?"↑":"↓"):"↔","finish");

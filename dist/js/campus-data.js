@@ -1,6 +1,6 @@
-import { surveyedPlans, entryPlan, genericPlan } from "./floor-plans.js?v=71548f074fc1";
-import { wingPlans } from "./wing-plans.js?v=71548f074fc1";
-import { wingDirectory, directoryById } from "./wing-directory.js?v=71548f074fc1";
+import { surveyedPlans, entryPlan, genericPlan } from "./floor-plans.js?v=a56ba11e977f";
+import { wingPlans } from "./wing-plans.js?v=a56ba11e977f";
+import { wingDirectory, directoryById } from "./wing-directory.js?v=a56ba11e977f";
 
 export const campus = {
   id: "veshnyakovsky-4",
@@ -85,6 +85,10 @@ export const transitions = [
     id:"c2-c3-bridge", name:"Переход между корпусами 2 и 3", short:"Межкорпусной переход",
     from:{buildingId:"c2",floor:4}, to:{buildingId:"c3",floor:3}, cost:8,
   },
+  {
+    id:"c1-c3-upper",name:"Переход в корпус 1",short:"Межкорпусной переход",
+    from:{buildingId:"c1",floor:5},to:{buildingId:"c3",floor:4},cost:8,
+  },
 ];
 
 const explicit = [
@@ -112,7 +116,7 @@ const otherLocations = [...explicit,...planLocations,...generatedRooms].filter(i
   .filter((item,index,all) => all.findIndex(candidate => candidate[0] === item[0]) === index)
   .map(([id,name,buildingId,floor,type,note]) => ({
     id,name,buildingId,floor,type,note,
-    verified: note !== "Расположение на этаже уточняется" && !(buildingId==="c3" && floor===8 && !surveyedPlans["c3:8"].rooms.some(room=>room.id===id)),
+    verified: Boolean(surveyedPlans[`${buildingId}:${floor}`]?.rooms.some(room=>room.id===id)),
   }));
 
 const wingRoomIndex=new Map(Object.values(wingPlans).flatMap(plan=>plan.rooms.map(room=>[room.id,room])));
@@ -134,8 +138,11 @@ const unmappedDirectory=wingDirectory.filter(entry=>!wingRoomIndex.has(entry.id)
 export const locations=[...otherLocations,...wingLocations,...unmappedDirectory];
 
 export const sharedFacilities = [
+  { id:"metro",name:"Метро Рязанский проспект",aliases:"метро рязанский проспект от метро до метро",type:"metro",buildingId:null,floor:null,graphNode:"metro",zone:"Выход № 1 · пешком к кампусу",verified:true,note:"Пешеходный маршрут до КПП по данным карт." },
+  { id:"entrance-c1",name:"Вход через корпус 1",aliases:"вход корпус 1 дополнительный вход",type:"entrance",buildingId:"c1",floor:1,graphNode:"c1:1:c1-1-exit-w",verified:true,note:"Дополнительный вход на 1-й этаж корпуса 1." },
+  ...[1,2].map(floor=>({id:`stairs-entry-${floor}`,name:`Лестница главного входа · ${floor} этаж`,type:"stairs",buildingId:"entry",floor,verified:true})),
   { id:"checkpoint", name:"КПП · Проходная", aliases:"кпп проходная контроль пропускной пункт", type:"checkpoint", buildingId:null, floor:null, graphNode:"checkpoint", zone:"Территория кампуса · у 4-го Вешняковского проезда", note:"Отдельное здание проходной рядом с въездом в кампус", verified:true, mapLabel:"КПП" },
-  { id:"main-entrance",name:"Главный вход",aliases:"центральный вход вход в здание",type:"entrance",buildingId:"entry",floor:1,verified:true,note:"Общий блок между корпусами 1 и 2. К корпусу 3 пройдите прямо через внутренний двор." },
+  { id:"main-entrance",name:"Главный вход",aliases:"центральный вход вход в здание",type:"entrance",buildingId:"entry",floor:1,verified:true,note:"Сразу направо — корпус 1, налево — корпус 2. Прямо через внутренний двор — корпус 3." },
   { id:"courtyard",name:"Внутренний двор",type:"outdoor",buildingId:null,floor:null,graphNode:"courtyard",zone:"Между главным входом и корпусом 3",verified:true },
   { id:"atm", name:"Банкоматы", type:"facility", floor:1, zone:"Общий блок 1–2 этажей", verified:false },
   { id:"buffet", name:"Буфет у главного входа", aliases:"буфет", type:"food", buildingId:"entry", floor:1, zone:"Главный вход · 1-й этаж", note:"На 1-м этаже общего входного блока", verified:true, mapLabel:"БФ" },

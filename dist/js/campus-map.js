@@ -1,11 +1,6 @@
-import { buildingGeoJSON } from "./campus-data.js?v=71548f074fc1";
-
-// Schematic perimeter; not a cadastral boundary. The gap is beside the checkpoint.
-const fencePoints=[[37.79504,55.71879],[37.79467,55.71782],[37.79599,55.71759],[37.79650,55.71850],[37.79526,55.71883]];
-const fenceData={type:"FeatureCollection",features:fencePoints.slice(1).map((b,i)=>{
-  const a=fencePoints[i],dx=b[0]-a[0],dy=b[1]-a[1],length=Math.hypot(dx,dy),nx=-dy/length*.000003,ny=dx/length*.000002;
-  return {type:"Feature",properties:{},geometry:{type:"Polygon",coordinates:[[[a[0]+nx,a[1]+ny],[b[0]+nx,b[1]+ny],[b[0]-nx,b[1]-ny],[a[0]-nx,a[1]-ny],[a[0]+nx,a[1]+ny]]]}};
-})};
+import { buildingGeoJSON } from "./campus-data.js?v=a56ba11e977f";
+import { fencePolygon,metroPoint,c1EntryPoint,streetGate,checkpointPoint,roadCoordinates } from "./outdoor-data.js?v=a56ba11e977f";
+const fenceData={type:"FeatureCollection",features:[fencePolygon()]};
 
 const buildingViews = {
   c1:{bearing:82,zoom:18.45,pitch:58},
@@ -20,14 +15,15 @@ export async function createCampusMap(container,onBuildingSelect,onCheckpointSel
   const map = new maplibregl.Map({
     container,
     style:"https://tiles.openfreemap.org/styles/bright",
-    center:[37.79559,55.71791],
-    zoom:mobile?17.9:18.18,
+    center:[37.79495,55.7181],
+    zoom:mobile?17.05:17.65,
     pitch:58,
     bearing:180,
     attributionControl:false,
   });
   map.addControl(new maplibregl.NavigationControl({showCompass:true,showZoom:true}),"top-left");
   map.addControl(new maplibregl.AttributionControl({compact:true}),"bottom-right");
+  const fitOverview=(duration=0)=>map.fitBounds([[37.79365,55.7175],[37.79655,55.71882]],{bearing:180,pitch:48,padding:{top:70,bottom:160,left:24,right:24},maxZoom:17.7,duration});
   map.on("styleimagemissing",event => {
     if (!map.hasImage(event.id)) map.addImage(event.id,{width:1,height:1,data:new Uint8Array([0,0,0,0])});
   });
@@ -49,6 +45,10 @@ export async function createCampusMap(container,onBuildingSelect,onCheckpointSel
       if (map.getLayer(layerId)) map.setLayoutProperty(layerId,"visibility","none");
     });
     map.addSource("campus-fence",{type:"geojson",data:fenceData});
+    map.addSource("campus-street",{type:"geojson",data:{type:"Feature",properties:{},geometry:{type:"LineString",coordinates:roadCoordinates}}});
+    map.addLayer({id:"campus-street",type:"line",source:"campus-street",layout:{"line-join":"round","line-cap":"round"},paint:{"line-color":"#d5dde5","line-width":5}});
+    map.addSource("checkpoint-exit",{type:"geojson",data:{type:"Feature",properties:{},geometry:{type:"LineString",coordinates:[streetGate,checkpointPoint]}}});
+    map.addLayer({id:"checkpoint-exit",type:"line",source:"checkpoint-exit",layout:{"line-join":"round","line-cap":"round"},paint:{"line-color":"#179b79","line-width":4}});
     map.addLayer({id:"campus-fence",type:"fill-extrusion",source:"campus-fence",paint:{"fill-extrusion-color":"#687d8c","fill-extrusion-height":1.6,"fill-extrusion-base":0,"fill-extrusion-opacity":1}});
     map.addSource("campus-buildings",{type:"geojson",data:buildingGeoJSON,promoteId:"id"});
     map.addLayer({
@@ -100,6 +100,14 @@ export async function createCampusMap(container,onBuildingSelect,onCheckpointSel
       if (id==="checkpoint-building") onCheckpointSelect?.();
     });
     if (selectedId) map.setFeatureState({source:"campus-buildings",id:selectedId},{selected:true});
+    for(const item of [{id:"metro",point:metroPoint,label:"М",className:"is-metro"},{id:"entrance-c1",point:c1EntryPoint,label:"Вход · 1",className:"is-entry"}]){
+      const button=document.createElement("button");button.type="button";button.className="map-poi "+item.className;button.textContent=item.label;
+      button.setAttribute("aria-label",item.id==="metro"?"Метро Рязанский проспект. Маршрут от метро или до метро.":"Вход через корпус 1");
+      button.title=item.id==="metro"?"Рязанский проспект · выход 1":"Вход через корпус 1";
+      button.addEventListener("click",()=>onCheckpointSelect?.(item.id));
+      new maplibregl.Marker({element:button,anchor:"bottom"}).setLngLat(item.point).addTo(map);
+    }
+    fitOverview();
   });
 
   return {
@@ -120,7 +128,7 @@ export async function createCampusMap(container,onBuildingSelect,onCheckpointSel
         if (previousId) map.setFeatureState({source:"campus-buildings",id:previousId},{selected:false});
         map.setFeatureState({source:"campus-buildings",id:"c3"},{selected:true});
       }
-      map.easeTo({center:[37.79559,55.71791],zoom:mobile?17.9:18.18,pitch:58,bearing:180,duration:520});
+      fitOverview(520);
     },
     resize() { map.resize(); },
     destroy() { map.remove(); },

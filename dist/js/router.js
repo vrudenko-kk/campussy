@@ -1,4 +1,5 @@
-import { buildingById, floorAreas, getFloorPlan, transitions } from "./campus-data.js?v=71548f074fc1";
+import { buildingById, floorAreas, getFloorPlan, transitions } from "./campus-data.js?v=a56ba11e977f";
+import { campusOutdoor } from "./outdoor-data.js?v=a56ba11e977f";
 
 const nodeId=(area,floor,id)=>area+":"+floor+":"+id;
 const roomId=location=>location.graphNode??nodeId(location.buildingId,location.floor,location.id);
@@ -41,15 +42,18 @@ export function getNavigationGraph(){
   }
   for(const transition of transitions){
     const {from,to}=transition;
-    join(connector(from.buildingId,from.floor,from.buildingId==="c1"?"east":"west"),connector(to.buildingId,to.floor,from.buildingId==="c1"?"west":"east"),{kind:"transition",cost:180,transition});
+    join(nodeId(from.buildingId,from.floor,"e-wing"),connector(to.buildingId,to.floor,from.buildingId==="c1"?"bridgeWest":"bridgeEast"),{kind:"transition",cost:180,transition});
   }
-  // Both supplied plans identify the four lift shafts on floors 1 and 8.
+  // All served floors share the same four shafts; include a boarding penalty.
   for(const side of ["w","e"])for(const number of [1,2]){
-    join(nodeId("c3",1,`lift-c3-1-${side}${number}`),nodeId("c3",8,`lift-c3-8-${side}${number}`),{kind:"vertical",cost:300,side:side==="w"?"west":"east",transport:"lift"});
+    for(let a=1;a<=9;a++)for(let b=a+1;b<=9;b++)join(nodeId("c3",a,`lift-c3-${a}-${side}${number}`),nodeId("c3",b,`lift-c3-${b}-${side}${number}`),{kind:"vertical",cost:120+(b-a)*45,side:side==="w"?"west":"east",transport:"lift"});
   }
+  for(const area of ["c1","c2"])join(connector("entry",1,area==="c1"?"toC1":"toC2"),nodeId(area,1,`${area}-1-exit-w`),{kind:"transition",cost:70,transition:{id:`entry-${area}`,name:`Главный вход ↔ ${buildingById(area).name}`,detail:`От главного входа ${area==="c1"?"направо в корпус 1":"налево в корпус 2"}.`}});
   // The shared entrance block is distinct from corpus 3.
-  addNode("checkpoint",[190,95]);addNode("courtyard",[500,430]);
+  addNode("metro",[60,775]);
+  addNode("checkpoint",campusOutdoor.checkpoint);addNode("courtyard",campusOutdoor.courtyard);
   join("checkpoint",nodeId("entry",1,"main-entrance"),{kind:"outdoor",cost:240,points:[[190,95],[190,150],[500,150],[500,220]],label:"КПП ↔ главный вход"});
+  join("checkpoint",nodeId("c1",1,"c1-1-exit-w"),{kind:"outdoor",cost:600,points:[[190,95],[190,150],[135,150],[135,550],[160,550]],label:"КПП ↔ вход корпуса 1"});
   join(connector("entry",1,"courtyard"),"courtyard",{kind:"outdoor",cost:150,points:[[500,275],[500,430]],label:"Главный вход ↔ внутренний двор"});
   join("courtyard",nodeId("c3",1,"entrance-c3"),{kind:"outdoor",cost:150,points:[[500,430],[500,620]],label:"Внутренний двор ↔ вход в корпус 3"});
   campusGraph={nodes,edges};return campusGraph;
@@ -90,6 +94,8 @@ function stagesFor(path,origin,destination){
     const {from,to,kind}=group;
     if(kind==="outdoor"){
       const checkpoint=group.edges.some(e=>e.from==="checkpoint"||e.to==="checkpoint");
+      const c1=from.buildingId==="c1"||to.buildingId==="c1";
+      if(c1)return {kind,buildingId:"entry",floor:1,title:"Территория кампуса",summary:from.id==="checkpoint"?"От КПП ко входу корпуса 1":"От корпуса 1 к КПП",detail:"Следуйте вдоль корпуса 1 по территории кампуса.",points:clean(group.edges.flatMap(e=>e.points)),fromLabel:from.id==="checkpoint"?"КПП":"Корпус 1",toLabel:to.id==="checkpoint"?"КПП":"Корпус 1"};
       const forward=checkpoint?from.id==="checkpoint":to.buildingId==="c3"||to.id==="courtyard";
       const summary=checkpoint?(forward?"От КПП к главному входу":"От главного входа к КПП"):(forward?"Через внутренний двор к корпусу 3":"Через внутренний двор к главному входу");
       return {kind,buildingId:"entry",floor:1,title:"Территория кампуса",summary,detail:checkpoint?"Главный вход находится в общем блоке между корпусами 1 и 2.":"Пройдите прямо через внутренний двор. Вход в корпус 3 находится на 1-м этаже.",points:clean(group.edges.flatMap(e=>e.points)),fromLabel:checkpoint?(forward?"КПП":"Вход"):(forward?"Вход":"Корпус 3"),toLabel:checkpoint?(forward?"Вход":"КПП"):(forward?"Корпус 3":"Вход")};
@@ -98,7 +104,7 @@ function stagesFor(path,origin,destination){
     if(kind==="vertical")return {kind,transport:group.transport??"stairs",buildingId:to.buildingId,floor:to.floor,fromFloor:from.floor,toFloor:to.floor,title:area.name+" · "+from.floor+" → "+to.floor+" этаж",summary:(to.floor>from.floor?"Поднимитесь":"Спуститесь")+(group.transport==="lift"?" на лифте":" по лестнице")+" на "+to.floor+"-й этаж",detail:area.name+", "+(group.side==="west"?"левая":"правая")+(group.transport==="lift"?" группа лифтов.":" лестница.")+" С "+from.floor+"-го на "+to.floor+"-й этаж.",fromBuildingId:from.buildingId,toBuildingId:to.buildingId,fromPoint:from.point,toPoint:to.point,connectorPoint:to.point,points:[]};
     if(kind==="transition"){
       const transition=group.edges[0].transition;
-      return {kind,buildingId:to.buildingId,floor:to.floor,fromBuildingId:from.buildingId,fromFloor:from.floor,toBuildingId:to.buildingId,toFloor:to.floor,title:transition?.name??"Общий входной блок",summary:buildingById(from.buildingId).name+", "+from.floor+" → "+area.name+", "+to.floor,detail:transition?.id==="c1-c3-cofix"?"Пройдите через переход у Coffix на 2-м этаже.":transition?"Переход соединяет 4-й этаж корпуса 2 с 3-м этажом корпуса 3.":"Пройдите через общий входной блок между корпусами 1 и 2.",fromPoint:from.point,toPoint:to.point,connectorPoint:to.point,points:[]};
+      return {kind,buildingId:to.buildingId,floor:to.floor,fromBuildingId:from.buildingId,fromFloor:from.floor,toBuildingId:to.buildingId,toFloor:to.floor,title:transition?.name??"Общий входной блок",summary:buildingById(from.buildingId).name+", "+from.floor+" → "+area.name+", "+to.floor,detail:transition?.id==="c1-c3-cofix"?"Пройдите через переход у Coffix на 2-м этаже.":transition?.id==="c1-c3-upper"?"Переход соединяет 4-й этаж корпуса 3 с 5-м этажом корпуса 1.":transition?.id==="c2-c3-bridge"?"Переход соединяет 3-й этаж корпуса 3 с 4-м этажом корпуса 2.":from.buildingId==="entry"?transition.detail:`Пройдите из ${buildingById(from.buildingId).name.toLowerCase()} в общий входной блок.`,fromPoint:from.point,toPoint:to.point,connectorPoint:to.point,points:[]};
     }
     const final=index===groups.length-1,first=index===0;
     const points=clean([from.point,...group.edges.map(e=>nodes.get(e.to).point)]);

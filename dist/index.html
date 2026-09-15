@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.9.0/dist/maplibre-gl.css" />
-    <link rel="stylesheet" href="styles.css?v=71548f074fc1" />
+    <link rel="stylesheet" href="styles.css?v=a56ba11e977f" />
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23071d38'/%3E%3Cpath d='M13 45h38v5H13zm5-19h28v17H18zm-4-3 18-11 18 11v3H14z' fill='%2328b88b'/%3E%3Cpath d='M23 30v10m9-10v10m9-10v10' stroke='white' stroke-width='3'/%3E%3C/svg%3E" />
     <title>Навигация по кампусу · Финансовый университет</title>
   </head>
@@ -36,7 +36,6 @@
             <p>Нажмите на корпус, чтобы открыть его этажи.</p>
           </div>
           <div id="campus-map" class="campus-map" aria-label="Трёхмерная карта корпусов"></div>
-          <div class="map-legend"><span><i></i> <span id="map-orientation-label">Вид на корпус 3 · направление на юг</span></span></div>
         </div>
       </section>
 
@@ -64,7 +63,7 @@
             <div class="map-tools" aria-label="Масштаб схемы"><button id="map-zoom-out" type="button" aria-label="Уменьшить">−</button><button id="map-fit" type="button">Весь этаж</button><button id="map-zoom-in" type="button" aria-label="Увеличить">+</button></div>
             <div class="floor-map-wrap">
               <div id="floor-buttons" class="floor-tabs" aria-label="Этажи"></div>
-              <div class="floor-canvas"><svg id="floor-map" role="img"></svg></div>
+              <div class="floor-canvas"><svg id="floor-map" role="group" aria-label="Интерактивный план этажа"></svg></div>
             </div>
             <button type="button" class="next-step-card" id="next-step-card" hidden>
               <span class="next-step-icon" id="next-step-icon" aria-hidden="true">→</span>
@@ -98,6 +97,10 @@
 
 <p id="route-source-note"></p></dialog>
 
+    <dialog id="floor-picker" class="floor-picker" aria-labelledby="floor-picker-title">
+      <header><div><p id="floor-picker-meta"></p><h2 id="floor-picker-title">Выберите этаж:</h2></div><button id="floor-picker-close" type="button" aria-label="Закрыть выбор этажа">×</button></header>
+      <div id="floor-picker-options" class="floor-picker-options"></div>
+    </dialog>
     <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
 
     <aside class="location-sheet" id="location-sheet" hidden role="dialog" aria-modal="true" aria-labelledby="location-sheet-title">
@@ -129,6 +132,6 @@
       </section>
     </aside>
 
-    <script type="module" src="js/app.js?v=71548f074fc1"></script>
+    <script type="module" src="js/app.js?v=a56ba11e977f"></script>
   </body>
 </html>

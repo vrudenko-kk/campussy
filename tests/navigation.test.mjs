@@ -85,7 +85,7 @@ test("lift to 8th floor and invalid route states",()=>{
 });
 
 test("transfers retain the correct approach and departure geometry in both directions",()=>{
-  for(const [a,b]of [["checkpoint","3805"],["3805","checkpoint"],["3310","2418"],["2418","3310"],["cofix","3303"]]){
+  for(const [a,b]of [["checkpoint","3805"],["3805","checkpoint"],["3310","2418"],["2418","3310"],["cofix","3304"]]){
     const result=route(a,b);assert.equal(result.status,"ready");
     for(const stage of result.stages.filter(s=>s.kind==="vertical"||s.kind==="transition")){
       assert.deepEqual(stage.approachPoints.at(-1),stage.fromPoint);

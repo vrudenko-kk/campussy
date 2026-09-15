@@ -280,6 +280,23 @@ body.route-active .app-main { min-height:0; }
 .transfer-copy { fill:#315b8c; font:600 27px Inter,Arial,sans-serif; text-anchor:middle; }
 .plan-direction { fill:#1476e8; stroke:#fff; stroke-width:2; pointer-events:none; }
 .plan-fence { fill:none; stroke:#60778b; stroke-width:4; stroke-dasharray:8 5; }
+.plan-fence { stroke-dasharray:none; stroke-linejoin:round; }
+.outdoor-road { fill:#d9e1e8; }
+.street-road { fill:none; stroke:#d5dee7; stroke-width:24; stroke-linejoin:round; }
+.street-building-label { font:700 24px Arial,sans-serif; text-anchor:middle; fill:#254664; paint-order:stroke; stroke:white; stroke-width:3; }
+.metro-dot { fill:#9746ae; stroke:#fff; stroke-width:4; }
+.passage-label { font:600 20px Arial,sans-serif; text-anchor:middle; fill:#167358; }
+.floor-picker { width:min(420px,calc(100vw - 24px)); max-height:calc(100dvh - 40px); padding:20px; border:1px solid var(--line); border-radius:22px; color:var(--ink); box-shadow:0 20px 80px #071d3833; }
+.floor-picker::backdrop { background:#071d3866; backdrop-filter:blur(3px); }
+.floor-picker header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:20px; }
+.floor-picker h2 { font-size:22px; margin:4px 0 0; }.floor-picker p { font-size:14px; color:var(--muted); margin:0; }
+.floor-picker header button { width:44px; height:44px; border:1px solid var(--line); border-radius:12px; background:#f4f7fb; font-size:24px; cursor:pointer; }
+.floor-picker-options { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.floor-picker-options button { min-height:56px; border:1px solid #d6e2ee; border-radius:12px; background:#f5f8fc; color:var(--navy); font-size:16px; cursor:pointer; }
+.floor-picker-options button[aria-current="true"] { background:var(--blue); border-color:var(--blue); color:#fff; }
+.floor-picker-options button:hover:not(:disabled) { box-shadow:0 0 0 2px #187beb; }.floor-picker-options button:disabled { opacity:.4; cursor:default; }
+.map-poi { border:2px solid #fff; padding:7px 10px; border-radius:12px; color:#fff; background:#116c60; font:600 13px Arial,sans-serif; box-shadow:0 3px 10px #071d3826; cursor:pointer; }
+.map-poi.is-metro { background:#923eab; width:40px; height:40px; padding:0; border-radius:50%; font-size:20px; }.map-poi.is-entry { background:#1b66b3; }
 .plan-partition { fill:none; stroke:#2c425e; stroke-width:5; stroke-linecap:square; pointer-events:none; }
 .plan-window { fill:none; stroke:#aac6d9; stroke-width:5; pointer-events:none; }
 .plan-room.is-service { fill:#eee9f7; }
