@@ -1,3 +1,5 @@
+import { surveyedPlans, entryPlan, genericPlan, legacyPlan } from "./floor-plans.js";
+
 export const campus = {
   id: "veshnyakovsky-4",
   name: "Кампус на Вешняковском",
@@ -44,7 +46,7 @@ export const buildingGeoJSON = {
     },
     {
       type: "Feature",
-      properties: { id: "link", name: "Переход между корпусами", levels: 2, height: 7, color: "#66a6ef", osmId: "129710009", interactive: false },
+      properties: { id: "entry", name: "Главный вход", levels: 2, height: 7, color: "#66a6ef", osmId: "129710009", interactive: true },
       geometry: { type: "Polygon", coordinates: [[
         [37.7955532,55.7182947],[37.7953907,55.7183163],[37.7954174,55.7183797],[37.7955798,55.7183580],
         [37.7955980,55.7184012],[37.7958823,55.7183633],[37.7958665,55.7183258],[37.7960202,55.7183052],
@@ -66,12 +68,15 @@ export const buildingGeoJSON = {
 export const buildings = [
   { id: "c1", name: "Корпус 1", short: "1", floors: [1,2,3,4,5], defaultFloor:1, entrance: "Главный вход со стороны 4-го Вешняковского проезда" },
   { id: "c2", name: "Корпус 2", short: "2", floors: [1,2,3,4,5], defaultFloor:1, entrance: "Вход через внутренний двор или переход" },
-  { id: "c3", name: "Корпус 3", short: "3", floors: [1,2,3,4,5,6,7,8,9], defaultFloor:3, entrance: "Центральный вход в главной части комплекса" },
+  { id: "c3", name: "Корпус 3", short: "3", floors: [1,2,3,4,5,6,7,8,9], defaultFloor:1, entrance: "Вход через внутренний двор на 1-й этаж" },
 ];
+
+export const entranceBlock = { id:"entry", name:"Главный вход", short:"Вход", floors:[1,2], defaultFloor:1, entrance:"Общий блок между корпусами 1 и 2" };
+export const floorAreas=[...buildings,entranceBlock];
 
 export const transitions = [
   {
-    id:"c1-c3-cofix", name:"Переход через Coffee Fix", short:"Coffee Fix",
+    id:"c1-c3-cofix", name:"Переход через Coffix", short:"Coffix",
     from:{buildingId:"c1",floor:2}, to:{buildingId:"c3",floor:2}, cost:7,
   },
   {
@@ -130,20 +135,27 @@ const coordinateOverrides = {
   "1515": { point:[1160,410], door:[1030,555], label:[1160,410] },
 };
 
-export const locations = [...explicit,...generatedRooms]
+const planLocations=Object.entries(surveyedPlans).flatMap(([key,plan])=>{
+  const [buildingId,floor]=key.split(":");
+  return plan.rooms.map(room=>[room.id,room.type==="room"?"Аудитория "+room.id:room.type==="lift"?"Лифт "+room.label.slice(1)+" · "+floor+"-й этаж":room.type==="restroom"?"Туалет · "+(room.id.endsWith("w")?"левое":"правое")+" крыло · "+floor+"-й этаж":room.label,buildingId,Number(floor),room.type,plan.source]);
+});
+
+export const locations = [...explicit,...planLocations,...generatedRooms]
   .filter((item,index,all) => all.findIndex(candidate => candidate[0] === item[0]) === index)
   .map(([id,name,buildingId,floor,type,note]) => ({
     id,name,buildingId,floor,type,note,
-    verified: note !== "Расположение на этаже уточняется",
+    verified: note !== "Расположение на этаже уточняется" && !(buildingId==="c1" && floor===5 && !coordinateOverrides[id]) && !(buildingId==="c3" && floor===8 && !surveyedPlans["c3:8"].rooms.some(room=>room.id===id)),
     ...coordinateOverrides[id],
   }));
 
 export const sharedFacilities = [
-  { id:"checkpoint", name:"КПП · Проходная", aliases:"кпп проходная контроль пропускной пункт", type:"checkpoint", buildingId:null, floor:null, routeAccess:{buildingId:"c3",floor:1}, zone:"Территория кампуса · у 4-го Вешняковского проезда", note:"Отдельное здание проходной рядом с въездом в кампус", verified:true, mapLabel:"КПП" },
+  { id:"checkpoint", name:"КПП · Проходная", aliases:"кпп проходная контроль пропускной пункт", type:"checkpoint", buildingId:null, floor:null, graphNode:"checkpoint", zone:"Территория кампуса · у 4-го Вешняковского проезда", note:"Отдельное здание проходной рядом с въездом в кампус", verified:true, mapLabel:"КПП" },
+  { id:"main-entrance",name:"Главный вход",aliases:"центральный вход вход в здание",type:"entrance",buildingId:"entry",floor:1,verified:true,note:"Общий блок между корпусами 1 и 2. К корпусу 3 пройдите прямо через внутренний двор." },
+  { id:"courtyard",name:"Внутренний двор",type:"outdoor",buildingId:null,floor:null,graphNode:"courtyard",zone:"Между главным входом и корпусом 3",verified:true },
   { id:"atm", name:"Банкоматы", type:"facility", floor:1, zone:"Общий блок 1–2 этажей", verified:false },
-  { id:"buffet", name:"Буфет у центрального входа", aliases:"буфет", type:"food", buildingId:"c3", floor:1, zone:"Корпус 3 · 1-й этаж", note:"На 1-м этаже от центрального входа", verified:true, mapLabel:"БФ" },
-  { id:"cofix", name:"Coffee Fix", aliases:"кофикс кофейня", type:"food", buildingId:"c1", floor:2, zone:"Переход корпусов 1 и 3", note:"У перехода из корпуса 1 в корпус 3", verified:true, mapLabel:"CF" },
-  { id:"canteen", name:"Столовая", type:"food", buildingId:"c3", floor:2, zone:"Корпус 3 · 2-й этаж", note:"От центрального входа поднимитесь на 2-й этаж", verified:true, mapLabel:"СТ" },
+  { id:"buffet", name:"Буфет у главного входа", aliases:"буфет", type:"food", buildingId:"entry", floor:1, zone:"Главный вход · 1-й этаж", note:"На 1-м этаже общего входного блока", verified:true, mapLabel:"БФ" },
+  { id:"cofix", name:"Coffix", aliases:"кофикс кофейня coffee fix cofix", type:"food", buildingId:"c1", floor:2, zone:"Переход корпусов 1 и 3", note:"У перехода из корпуса 1 в корпус 3", verified:true, mapLabel:"Coffix" },
+  { id:"canteen", name:"Столовая", type:"food", buildingId:"entry", floor:2, zone:"Главный вход · 2-й этаж", note:"От главного входа поднимитесь на 2-й этаж", verified:true, mapLabel:"СТ" },
   { id:"library", name:"Библиотека", aliases:"медиатека", type:"service", buildingId:"c2", floor:1, zone:"Корпус 2 · 1-й этаж", note:"1-й этаж корпуса 2", verified:true, mapLabel:"Б" },
   { id:"wardrobe", name:"Гардеробы", type:"facility", floor:1, zone:"Общий блок 1–2 этажей", verified:false },
   { id:"gym", name:"Спортивный зал", aliases:"спортзал", type:"facility", buildingId:"c1", floor:1, zone:"Корпус 1 · 1-й этаж", note:"1-й этаж корпуса 1", verified:true, mapLabel:"СП" },
@@ -153,34 +165,23 @@ export const sharedFacilities = [
 
 export const allSearchable = [...locations,...sharedFacilities];
 
-export function buildingById(id) { return buildings.find(building => building.id === id); }
+export function buildingById(id) { return floorAreas.find(building => building.id === id); }
 export function locationsOnFloor(buildingId,floor) {
   return [...locations,...sharedFacilities].filter(location => location.buildingId === buildingId && location.floor === Number(floor));
 }
 export function locationById(id) { return allSearchable.find(location => location.id === id); }
 
-export function floorGeometryFor(location,fallbackIndex=0) {
-  if (location.point && location.door) {
-    return {
-      point:[...location.point],door:[...location.door],label:[...(location.label??location.point)],
-      x:null,y:null,width:null,height:null,custom:true,
-    };
+const planCache=new Map();
+export function getFloorPlan(buildingId,floor) {
+  const key=buildingId+":"+Number(floor);
+  if(!planCache.has(key)){
+    const rooms=locationsOnFloor(buildingId,floor);
+    const plan=surveyedPlans[key]??(buildingId==="entry"?entryPlan(floor):buildingId==="c1"&&Number(floor)===5?legacyPlan(rooms):genericPlan(buildingId,floor,rooms));
+    planCache.set(key,plan);
   }
-
-  const suffix=Number.parseInt(location.id,10)%100;
-  let slot=null;
-  if (location.buildingId==="c1" && suffix>=2 && suffix<=17) slot=suffix-2;
-  if (location.buildingId==="c2" && suffix>=18 && suffix<=33) slot=suffix-18;
-  if (location.buildingId==="c3" && suffix>=2 && suffix<=17) slot=suffix-2;
-  const canonical=slot??fallbackIndex;
-  const columns=8;
-  const row=Math.floor(canonical/columns)%2;
-  const localBase=canonical%columns;
-  const local=location.buildingId==="c2"?columns-1-localBase:localBase;
-  const usable=1550;
-  const width=usable/columns;
-  const x=225+local*width;
-  const y=row===0?240:610;
-  const label=[x+(width-10)/2,y+120];
-  return {x,y,width:width-10,height:230,door:[x+width/2,row===0?470:570],label,point:[...label],custom:false};
+  return planCache.get(key);
+}
+export function floorGeometryFor(location) {
+  if(!location?.buildingId) return null;
+  return getFloorPlan(location.buildingId,location.floor).rooms.find(room=>room.id===location.id)??null;
 }

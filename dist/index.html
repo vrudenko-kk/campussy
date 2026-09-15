@@ -48,6 +48,7 @@
         </nav>
         <section class="route-journey" id="route-journey" hidden tabindex="-1" aria-labelledby="route-journey-title">
           <div class="route-navigation-head">
+            <button type="button" id="route-exit" aria-label="Закрыть маршрут и вернуться к карте">×</button>
             <div><p class="eyebrow">Навигация</p><h2 id="route-journey-title">Маршрут</h2></div>
             <button type="button" id="route-edit">Изменить</button>
           </div>
@@ -75,6 +76,7 @@
         <div class="floor-layout">
           <section class="floor-canvas-card" aria-label="Схема этажа">
             <div class="floor-toolbar"><div><strong id="floor-map-title">План этажа</strong><span id="floor-map-subtitle">Нажмите на аудиторию для действий</span></div><div class="floor-legend"><span><i class="legend-origin"></i>Старт</span><span><i class="legend-route"></i>Маршрут</span></div></div>
+            <div class="map-tools" aria-label="Масштаб схемы"><button id="map-zoom-out" type="button" aria-label="Уменьшить">−</button><button id="map-fit" type="button">Весь этаж</button><button id="map-zoom-in" type="button" aria-label="Увеличить">+</button></div>
             <div class="floor-map-wrap">
               <div id="floor-buttons" class="floor-tabs" aria-label="Этажи"></div>
               <div class="floor-canvas"><svg id="floor-map" role="img"></svg></div>
@@ -84,7 +86,7 @@
               <span><small>Следующий шаг</small><strong id="next-step-title"></strong><em id="next-step-detail"></em></span>
               <b aria-hidden="true">›</b>
             </button>
-            <div class="data-note"><span>i</span><p>План 5-го этажа корпуса 1 оцифрован по материалам проекта. Остальные этажи пока показаны схематично.</p></div>
+            <div class="data-note"><span>i</span><p id="plan-source"></p></div>
           </section>
         </div>
       </section>

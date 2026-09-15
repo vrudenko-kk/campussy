@@ -167,5 +167,59 @@ button:focus-visible,input:focus-visible,summary:focus-visible,[role="button"]:f
 }
 
 @media (max-width:380px) {
-  .recommendation-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }.floor-topbar button span { display:none; }.floor-canvas { min-height:330px; }#floor-map { width:660px; min-width:660px; }.route-navigation-head h2 { max-width:64vw; }
+  .recommendation-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }.floor-topbar button span { display:none; }.route-navigation-head h2 { max-width:64vw; }
+}
+
+/* Floor plans share geometry with the navigation graph. */
+.plan-ground { fill:#f3f7fb; }
+.plan-outline { fill:#e9eef4; stroke:#253d58; stroke-width:5; stroke-linejoin:round; }
+.plan-corridor { fill:none; stroke:#fff; stroke-width:56; stroke-linejoin:round; stroke-linecap:square; }
+.plan-room { fill:#e1eaf4; stroke:#2c425e; stroke-width:4; }
+.plan-room.is-restroom { fill:#e7e0f6; }
+.plan-room.is-lift { fill:#c7deef; }.plan-room.is-stairs { fill:#d8e4ef; }
+.plan-room.is-food { fill:#fff0d7; }.plan-room.is-entrance { fill:#d4efe6; }.plan-room.is-hall { fill:#fff; stroke:none; }
+.plan-room.is-facility { fill:#e0ebed; }
+.plan-room.is-overlay { fill:rgba(228,239,250,.35); stroke:none; }
+.plan-room.is-origin { fill:#d1e5ff; stroke:#1476e8; stroke-width:6; }
+.plan-room.is-destination { fill:#cdf3df; stroke:#0b9161; stroke-width:6; }
+.floor-room-hotspot:hover .plan-room,.floor-room-hotspot:focus .plan-room { fill:#bfe0ff; stroke:#1476e8; stroke-width:6; }
+.plan-door { stroke:#fff; stroke-width:8; fill:none; }
+.plan-stair-line { stroke:#71869e; stroke-width:2; }.plan-lift-cross { stroke:#587895; stroke-width:2; }
+.plan-label { fill:#162c48; font:800 34px Inter,Arial,sans-serif; text-anchor:middle; dominant-baseline:middle; pointer-events:none; paint-order:stroke; stroke:#f1f6fc; stroke-width:3; }
+.plan-label.is-small { font-size:17px; stroke-width:4; }
+.plan-caption { fill:#536980; font:600 23px Inter,Arial,sans-serif; text-anchor:middle; pointer-events:none; }
+.plan-route,.plan-route-halo { fill:none; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
+.plan-route-halo { stroke:#fff; stroke-width:15; }.plan-route { stroke:#1476e8; stroke-width:8; }
+.plan-marker { stroke:#fff; stroke-width:4; pointer-events:none; }.plan-marker.start { fill:#1476e8; }.plan-marker.finish { fill:#099663; }
+.plan-marker-label { fill:#fff; font:800 17px Inter,Arial,sans-serif; text-anchor:middle; pointer-events:none; }
+.plan-building { fill:#d5e3f0; stroke:#6485a5; stroke-width:4; }.plan-entry { fill:#f7e1ba; stroke:#ab7c39; stroke-width:4; }
+.map-tools { display:flex; align-items:center; justify-content:flex-end; gap:.35rem; padding:.35rem .65rem; border-bottom:1px solid var(--line); }
+.map-tools button { min-height:36px; min-width:36px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--navy); cursor:pointer; font-size:1rem; }
+.map-tools #map-fit { padding:0 .75rem; font-size:.8rem; }
+.route-navigation-head>div { flex:1; min-width:0; }.route-navigation-head h2 { max-width:100%!important; }
+#route-exit { flex:none; width:32px; padding:0; font-size:1.25rem; }
+.floor-map-wrap { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; }
+.floor-tabs { position:static; grid-column:2; grid-row:1; margin:.35rem; box-shadow:none; backdrop-filter:none; }
+.floor-canvas { grid-column:1; grid-row:1; min-width:0; min-height:0; width:100%; padding:.3rem; display:block; overflow:auto; }
+#floor-map { width:100%; min-width:0; height:auto; max-height:calc(100dvh - 265px); }
+.floor-canvas.is-zoomed #floor-map { max-height:none; max-width:none; }
+.floor-view.is-route-mode .floor-canvas { display:block; overflow:auto; }
+.floor-view.is-route-mode #floor-map { max-height:calc(100dvh - 365px); min-height:160px; }
+.floor-view.is-route-mode .floor-canvas.is-zoomed #floor-map { max-height:none; }
+.floor-view.is-route-mode .floor-map-wrap { grid-template-columns:minmax(0,1fr); }
+.floor-view.is-route-mode .floor-tabs { display:none; }
+.floor-view.is-route-mode .data-note { display:flex; font-size:.7rem; }
+.floor-topbar { grid-template-columns:auto minmax(0,1fr); position:relative; top:auto; }
+.floor-tab { width:32px; height:32px; }
+@media (max-width:760px) {
+  .floor-view.is-route-mode .floor-topbar { display:none; }
+  .floor-tabs { gap:.12rem; padding:.15rem; margin:.15rem; }
+  .floor-toolbar { padding:.5rem .65rem; }.floor-toolbar>div:first-child span { font-size:.75rem; }
+  .floor-view.is-route-mode .route-journey { scroll-margin-top:72px; }
+  .next-step-card strong,.next-step-card em { white-space:normal; }
+  .floor-view.is-route-mode .floor-toolbar { display:none; }
+  .floor-view.is-route-mode .current-step-card p { display:block; font-size:.75rem; }
+}
+@media (prefers-reduced-motion:reduce) {
+  *,*::before,*::after { scroll-behavior:auto!important; transition:none!important; }
 }

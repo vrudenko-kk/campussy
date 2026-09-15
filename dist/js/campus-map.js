@@ -4,6 +4,7 @@ const buildingViews = {
   c1:{bearing:82,zoom:18.45,pitch:58},
   c2:{bearing:-98,zoom:18.45,pitch:58},
   c3:{bearing:180,zoom:18.35,pitch:58},
+  entry:{bearing:180,zoom:18.4,pitch:55},
 };
 
 export async function createCampusMap(container,onBuildingSelect,onCheckpointSelect) {
@@ -26,7 +27,7 @@ export async function createCampusMap(container,onBuildingSelect,onCheckpointSel
 
   let selectedId = "c3";
   let hoveredId = null;
-  const centers=Object.fromEntries(buildingGeoJSON.features.filter(feature=>["c1","c2","c3"].includes(feature.properties.id)).map(feature=>{
+  const centers=Object.fromEntries(buildingGeoJSON.features.filter(feature=>["c1","c2","c3","entry"].includes(feature.properties.id)).map(feature=>{
     const points=feature.geometry.coordinates[0]; const center=points.reduce((sum,[lng,lat])=>[sum[0]+lng,sum[1]+lat],[0,0]).map(value=>value/points.length);
     return [feature.properties.id,center];
   }));
@@ -45,7 +46,7 @@ export async function createCampusMap(container,onBuildingSelect,onCheckpointSel
       id:"campus-buildings",type:"fill-extrusion",source:"campus-buildings",
       paint:{
         "fill-extrusion-color":["case",
-          ["==",["get","id"],"link"],"#8fdcc8",
+          ["==",["get","id"],"entry"],"#e1b56d",
           ["==",["get","id"],"checkpoint-building"],"#18aa7d",
           ["boolean",["feature-state","selected"],false],"#11b984",
           ["boolean",["feature-state","hovered"],false],"#3b8eea",
@@ -66,13 +67,13 @@ export async function createCampusMap(container,onBuildingSelect,onCheckpointSel
     });
     map.addLayer({
       id:"campus-labels",type:"symbol",source:"campus-buildings",
-      filter:["match",["get","id"],["c1","c2","c3","checkpoint-building"],true,false],
+      filter:["match",["get","id"],["c1","c2","c3","entry","checkpoint-building"],true,false],
       layout:{"text-field":["get","name"],"text-size":["case",["==",["get","id"],"checkpoint-building"],11,14],"text-font":["Noto Sans Regular"],"text-offset":["case",["==",["get","id"],"checkpoint-building"],["literal",[0,-.65]],["literal",[0,-1.1]]]},
       paint:{"text-color":["case",["boolean",["feature-state","selected"],false],"#05775a","#0b1d38"],"text-halo-color":"#ffffff","text-halo-width":2.5},
     });
     map.on("mousemove","campus-buildings",event => {
       const id=event.features?.[0]?.properties?.id;
-      const interactive=["c1","c2","c3","checkpoint-building"].includes(id);
+      const interactive=["c1","c2","c3","entry","checkpoint-building"].includes(id);
       map.getCanvas().style.cursor=interactive?"pointer":"";
       if (hoveredId && hoveredId!==id) map.setFeatureState({source:"campus-buildings",id:hoveredId},{hovered:false});
       hoveredId=interactive?id:null;
@@ -86,7 +87,7 @@ export async function createCampusMap(container,onBuildingSelect,onCheckpointSel
     map.on("click","campus-buildings",event => {
       const feature = event.features?.[0];
       const id=feature?.properties?.id;
-      if (["c1","c2","c3"].includes(id)) onBuildingSelect(id);
+      if (["c1","c2","c3","entry"].includes(id)) onBuildingSelect(id);
       if (id==="checkpoint-building") onCheckpointSelect?.();
     });
     if (selectedId) map.setFeatureState({source:"campus-buildings",id:selectedId},{selected:true});
